@@ -54,6 +54,24 @@ export default function App() {
         </div>
       </div>
 
+      {/* Bottom nav — mobile only (hidden on desktop via CSS) */}
+      <nav className="bottom-nav">
+        {([
+          { id: 'pos', icon: '🧾', label: 'POS' },
+          { id: 'products', icon: '📦', label: 'Products' },
+          { id: 'history', icon: '📋', label: 'History' },
+        ] as { id: Screen; icon: string; label: string }[]).map(({ id, icon, label }) => (
+          <button
+            key={id}
+            className={`bottom-nav-btn${screen === id ? ' active' : ''}`}
+            onClick={() => setScreen(id)}
+          >
+            <span className="bn-icon">{icon}</span>
+            {label}
+          </button>
+        ))}
+      </nav>
+
       {editingShop && (
         <div className="modal-overlay" onClick={() => setEditingShop(false)}>
           <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>

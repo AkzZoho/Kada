@@ -343,3 +343,131 @@ tr:hover td { background: #fafcfa; }
   .modal { box-shadow: none; max-height: none; border: none; }
   .modal-header button, .modal-footer { display: none !important; }
 }
+
+/* ── Mobile-only base (hidden on desktop) ── */
+.bottom-nav { display: none; }
+.cart-fab { display: none; }
+.cart-mobile-bar { display: none; }
+
+.bottom-nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; background: none; border: none; color: rgba(255,255,255,0.45);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer; padding: 8px 4px;
+  transition: color 0.15s;
+}
+.bottom-nav-btn .bn-icon { font-size: 22px; line-height: 1; }
+.bottom-nav-btn.active { color: var(--gold); }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  body { height: auto; min-height: 100dvh; overflow: auto; }
+
+  #root {
+    height: auto; min-height: 100dvh;
+    overflow: visible; padding-bottom: 60px;
+  }
+
+  /* Sidebar → gone; bottom nav takes over */
+  .sidebar { display: none; }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--sidebar-bg);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 40;
+  }
+
+  .main { overflow: visible; }
+  .screen { overflow: visible; height: auto; padding: 12px 12px 0; }
+
+  /* POS: single-column, room for FAB */
+  .pos-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    padding-bottom: 76px;
+  }
+
+  .product-panel { overflow: visible; }
+
+  .product-grid {
+    overflow: visible;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .product-card { padding: 10px; gap: 4px; }
+  .prod-price { font-size: 14px; }
+
+  /* Cart: hidden by default; becomes full-screen overlay */
+  .cart-panel { display: none; }
+
+  .cart-panel.mobile-open {
+    display: flex;
+    position: fixed; inset: 0; bottom: 60px;
+    z-index: 50;
+    background: var(--bg);
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .cart-panel.mobile-open .cart-card {
+    border-radius: 0; box-shadow: none; border: none; border-bottom: 1px solid var(--border);
+  }
+
+  .cart-panel.mobile-open .action-btns {
+    position: sticky; bottom: 0;
+    background: var(--bg); padding: 12px;
+    border-top: 1px solid var(--border);
+    margin: 0;
+  }
+
+  .cart-items { max-height: none; }
+
+  /* Back bar at top of open cart */
+  .cart-mobile-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: var(--sidebar-bg); color: #fff;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .cart-mobile-bar button {
+    background: none; border: none; color: var(--gold);
+    font-size: 22px; line-height: 1; cursor: pointer; padding: 0;
+  }
+  .cart-mobile-bar span { font-size: 16px; font-weight: 700; }
+
+  /* Cart FAB */
+  .cart-fab {
+    display: flex;
+    position: fixed; bottom: 68px; left: 12px; right: 12px;
+    background: var(--green); color: #fff;
+    border: none; border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; z-index: 35;
+    box-shadow: 0 4px 20px rgba(45,134,83,0.45);
+    justify-content: space-between; align-items: center;
+  }
+
+  /* Tables: scroll horizontally */
+  .table-card { overflow-x: auto; }
+  table { min-width: 480px; }
+  td, th { padding: 10px 12px; }
+
+  /* Screen header: stack on mobile */
+  .screen-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .screen-header .btn { width: 100%; text-align: center; }
+
+  /* Modals: bottom sheet */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal { max-width: 100%; border-radius: 20px 20px 0 0; max-height: 90dvh; }
+
+  /* History */
+  .history-filters { flex-direction: column; }
+  .bill-card { grid-template-columns: auto 1fr; gap: 8px; }
+  .bill-amount { grid-column: 2; text-align: left; }
+
+  /* Customer row: stack */
+  .customer-row { flex-direction: column; }
+}

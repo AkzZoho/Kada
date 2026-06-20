@@ -34,6 +34,7 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
   const [paymentMode, setPaymentMode] = React.useState<PaymentMode>('cash');
   const [savedBill, setSavedBill] = React.useState<Bill | null>(null);
   const [shopName] = React.useState(() => storage.getShopName());
+  const [cartOpen, setCartOpen] = React.useState(false);
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -219,8 +220,13 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
         </div>
       </div>
 
-      {/* Right: Cart Panel */}
-      <div className="cart-panel">
+      {/* Right: Cart Panel (+ mobile full-screen when open) */}
+      <div className={`cart-panel${cartOpen ? ' mobile-open' : ''}`}>
+        {/* Mobile top bar */}
+        <div className="cart-mobile-bar">
+          <button onClick={() => setCartOpen(false)}>‹</button>
+          <span>Cart ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
+        </div>
         <div className="cart-card">
           {/* Customer Info */}
           <div className="customer-row">
@@ -345,6 +351,14 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
           </button>
         </div>
       </div>
+
+      {/* Cart FAB (mobile only, shown when cart has items) */}
+      {cart.length > 0 && !cartOpen && (
+        <button className="cart-fab" onClick={() => setCartOpen(true)}>
+          <span>{totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in cart</span>
+          <span>₹{totals.grandTotal.toFixed(2)} →</span>
+        </button>
+      )}
 
       {/* Bill View Modal */}
       {savedBill && (
