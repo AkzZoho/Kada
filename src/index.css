@@ -213,6 +213,7 @@ h1, h2, h3, h4, h5, h6 {
 .scan-toast-ok { background: var(--green-light); color: var(--green-dark); border: 1px solid rgba(42,138,87,0.2); }
 .scan-toast-err { background: var(--danger-light); color: var(--danger); border: 1px solid rgba(220,38,38,0.2); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Category Tabs ── */
 .cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; }

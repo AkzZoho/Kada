@@ -1,5 +1,6 @@
-import React from 'react';
-import { X, Printer, Share2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Printer, Share2, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import type { Bill, ShopInfo } from '../types';
 import { storage } from '../storage';
 
@@ -26,35 +27,6 @@ function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function buildShareText(bill: Bill, shop: ShopInfo): string {
-  const sep = '━━━━━━━━━━━━━━━━━━━━━━';
-  const items = bill.items.map(i => `  ${i.name} ×${i.quantity} = ${fmt(i.lineTotal)}`).join('\n');
-  const discount = bill.discount > 0 ? `\nDiscount: -${fmt(bill.discount)}` : '';
-  return (
-    `*${shop.name}*\n` +
-    (shop.address ? `${shop.address}\n` : '') +
-    (shop.phone ? `Ph: ${shop.phone}\n` : '') +
-    (shop.gstin ? `GSTIN: ${shop.gstin}\n` : '') +
-    `${sep}\n` +
-    `*TAX INVOICE*\n` +
-    `Bill No: ${bill.billNumber}\n` +
-    `Date: ${formatDate(bill.date)}\n` +
-    (bill.customerName ? `Customer: ${bill.customerName}\n` : '') +
-    (bill.customerPhone ? `Phone: ${bill.customerPhone}\n` : '') +
-    `${sep}\n` +
-    `${items}\n` +
-    `${sep}\n` +
-    `Taxable: ${fmt(bill.subtotal)}\n` +
-    `CGST: ${fmt(bill.totalCGST)}\n` +
-    `SGST: ${fmt(bill.totalSGST)}` +
-    `${discount}\n` +
-    `*TOTAL: ${fmt(bill.grandTotal)}*\n` +
-    `Payment: ${bill.paymentMode.toUpperCase()}\n` +
-    `${sep}\n` +
-    `Thank you for shopping! 🙏`
-  );
-}
-
 // Group items by GST rate for the tax summary section
 function buildTaxSummary(bill: Bill) {
   const map = new Map<number, { taxable: number; cgst: number; sgst: number }>();
@@ -69,9 +41,23 @@ function buildTaxSummary(bill: Bill) {
   return Array.from(map.entries()).sort(([a], [b]) => a - b);
 }
 
+async function captureInvoice(el: HTMLElement): Promise<Blob> {
+  const canvas = await html2canvas(el, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false,
+  });
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas empty')), 'image/png')
+  );
+}
+
 const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
   const shop: ShopInfo = storage.getShopInfo();
   const taxSummary = buildTaxSummary(bill);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const [sharing, setSharing] = useState(false);
 
   function handlePrint() {
     const prev = document.title;
@@ -80,13 +66,36 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
     document.title = prev;
   }
 
-  function handleShare() {
-    const text = buildShareText(bill, shop);
-    if ('share' in navigator) {
-      (navigator as Navigator & { share: (d: object) => Promise<void> })
-        .share({ title: `Bill ${bill.billNumber} — ${shop.name}`, text }).catch(() => {});
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  async function handleShare() {
+    if (!invoiceRef.current || sharing) return;
+    setSharing(true);
+    try {
+      const blob = await captureInvoice(invoiceRef.current);
+      const file = new File([blob], `${bill.billNumber}.png`, { type: 'image/png' });
+      const nav = navigator as Navigator & {
+        share?: (d: object) => Promise<void>;
+        canShare?: (d: object) => boolean;
+      };
+
+      if (nav.share && nav.canShare?.({ files: [file] })) {
+        // Native share sheet with image file (mobile)
+        await nav.share({ files: [file], title: `${bill.billNumber} — ${shop.name}` });
+      } else if (nav.share) {
+        // Share supported but no file sharing — try image URL via object URL
+        await nav.share({ title: `${bill.billNumber} — ${shop.name}` });
+      } else {
+        // Desktop: download the image
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${bill.billNumber}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    } catch {
+      // user cancelled or share failed — silently ignore
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -100,7 +109,7 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
         </div>
 
         <div className="modal-body invoice-body">
-          <div className="invoice">
+          <div className="invoice" ref={invoiceRef}>
 
             {/* Shop Header */}
             <div className="inv-shop-header">
@@ -233,9 +242,13 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
             className="btn"
             style={{ background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}
             onClick={handleShare}
+            disabled={sharing}
           >
-            <Share2 size={15} />
-            {'share' in navigator ? 'Share' : 'WhatsApp'}
+            {sharing
+              ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Share2 size={15} />
+            }
+            {sharing ? 'Preparing…' : 'Share'}
           </button>
           <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={handlePrint}>
             <Printer size={15} /> Print
