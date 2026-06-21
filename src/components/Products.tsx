@@ -98,7 +98,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
   }
 
   return (
-    <div className="screen">
+    <div>
       <div className="screen-header">
         <div className="screen-header-text">
           <h2>Products</h2>
@@ -114,46 +114,28 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
             <p>No products yet. Add your first product!</p>
           </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Unit</th>
-                <th>GST Rate</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td style={{ fontWeight: 600 }}>{product.name}</td>
-                  <td>
-                    {product.category
-                      ? <span className="cat-badge">{product.category}</span>
-                      : <span style={{ color: '#aaa' }}>—</span>}
-                  </td>
-                  <td style={{ fontWeight: 600 }}>₹{product.price.toFixed(2)}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{product.unit}</td>
-                  <td><span className="gst-badge">{product.gstRate}%</span></td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="icon-btn edit" title="QR Label" onClick={() => setQrProduct(product)}>
-                        QR
-                      </button>
-                      <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}>
-                        ✏️
-                      </button>
-                      <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}>
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="product-list">
+            {products.map((product) => (
+              <div key={product.id} className="pli">
+                <div className="pli-main">
+                  <div className="pli-name">{product.name}</div>
+                  <div className="pli-tags">
+                    {product.category && <span className="cat-badge">{product.category}</span>}
+                    <span className="gst-badge">{product.gstRate}%</span>
+                    <span className="unit-badge">{product.unit}</span>
+                  </div>
+                </div>
+                <div className="pli-right">
+                  <div className="pli-price">₹{product.price.toFixed(2)}</div>
+                  <div className="pli-actions">
+                    <button className="icon-btn" title="QR Label" onClick={() => setQrProduct(product)}>QR</button>
+                    <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}>✏️</button>
+                    <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}>🗑️</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -233,52 +215,26 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
       {/* QR Label Modal */}
       {qrProduct && (
         <div className="modal-overlay" onClick={() => setQrProduct(null)}>
-          <div className="modal" style={{ maxWidth: 320 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>QR Label</h3>
+          <div className="modal qr-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header no-print">
+              <h3>QR Label — {qrProduct.name}</h3>
               <button className="modal-close" onClick={() => setQrProduct(null)}>×</button>
             </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '24px 20px' }}>
-              <div
-                id="qr-label-print"
-                style={{
-                  border: '2px solid var(--border)',
-                  borderRadius: 12,
-                  padding: '20px 24px',
-                  textAlign: 'center',
-                  background: '#fff',
-                  width: '100%',
-                  maxWidth: 260,
-                }}
-              >
+            <div className="modal-body" style={{ display: 'flex', justifyContent: 'center', padding: '28px 20px 20px' }}>
+              <div className="qr-label">
                 {qrProduct.category && (
-                  <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', marginBottom: 6 }}>
-                    {qrProduct.category}
-                  </div>
+                  <div className="qr-label-cat">{qrProduct.category}</div>
                 )}
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, lineHeight: 1.3 }}>
-                  {qrProduct.name}
+                <div className="qr-label-name">{qrProduct.name}</div>
+                <div className="qr-label-price">₹{qrProduct.price.toFixed(2)}</div>
+                <div className="qr-label-sub">per {qrProduct.unit} · GST {qrProduct.gstRate}%</div>
+                <div className="qr-label-code">
+                  <QRCodeSVG value={qrData(qrProduct)} size={160} level="M" />
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-dark)', marginBottom: 4 }}>
-                  ₹{qrProduct.price.toFixed(2)}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>
-                  per {qrProduct.unit} · GST {qrProduct.gstRate}%
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <QRCodeSVG
-                    value={qrData(qrProduct)}
-                    size={140}
-                    level="M"
-                    style={{ borderRadius: 4 }}
-                  />
-                </div>
+                <div className="qr-label-hint">Scan for product info</div>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-                Scan to view product details
-              </p>
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer no-print">
               <button className="btn btn-ghost" onClick={() => setQrProduct(null)}>Close</button>
               <button className="btn btn-primary" onClick={() => window.print()}>
                 🖨️ Print Label
