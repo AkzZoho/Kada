@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Store, Users, Save, Plus, Trash2 } from 'lucide-react';
 import type { ShopInfo } from '../types';
-import { storage } from '../storage';
 
 interface SettingsProps {
   shopInfo: ShopInfo;
@@ -43,8 +42,6 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
       phone: form.phone.trim(),
       operatorName: form.operatorName,
     };
-    storage.setShopInfo(info);
-    storage.saveOperators(operators);
     onSave(info, operators);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

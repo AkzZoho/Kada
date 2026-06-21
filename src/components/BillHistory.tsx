@@ -1,12 +1,11 @@
 import React from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import type { Bill } from '../types';
-import { storage } from '../storage';
 import BillView from './BillView';
 
 interface BillHistoryProps {
   bills: Bill[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -19,8 +18,6 @@ function formatDateShort(isoString: string): string {
 const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
   const [search, setSearch] = React.useState('');
   const [selectedBill, setSelectedBill] = React.useState<Bill | null>(null);
-  const [shopName] = React.useState(() => storage.getShopName());
-
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return bills;
@@ -92,7 +89,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
       )}
 
       {selectedBill && (
-        <BillView bill={selectedBill} shopName={shopName} onClose={() => setSelectedBill(null)} />
+        <BillView bill={selectedBill} shopName="" onClose={() => setSelectedBill(null)} />
       )}
     </div>
   );

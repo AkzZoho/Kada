@@ -1,5 +1,5 @@
 import React from 'react';
-import { Receipt, Package, ClipboardList, Settings2, User } from 'lucide-react';
+import { Receipt, Package, ClipboardList, Settings2, User, LogOut } from 'lucide-react';
 import type { Screen, ShopInfo } from '../types';
 
 interface SidebarProps {
@@ -7,6 +7,7 @@ interface SidebarProps {
   onNav: (s: Screen) => void;
   shopInfo: ShopInfo;
   onEditSettings: () => void;
+  onSignOut: () => void;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -22,7 +23,7 @@ const NAV_ITEMS: { screen: Screen; Icon: React.FC<{ size: number }>; label: stri
   { screen: 'history',  Icon: ClipboardList,  label: 'History' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings, onSignOut }) => {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -54,6 +55,10 @@ const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettin
         <button className="sidebar-settings-btn" onClick={onEditSettings}>
           <Settings2 size={14} />
           Settings
+        </button>
+        <button className="sidebar-settings-btn" onClick={onSignOut} style={{ color: 'rgba(220,38,38,0.5)' }}>
+          <LogOut size={14} />
+          Sign Out
         </button>
       </div>
     </aside>

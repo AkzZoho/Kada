@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Printer, Share2, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import type { Bill, ShopInfo } from '../types';
-import { storage } from '../storage';
+import { useShop } from '../App';
 
 interface BillViewProps {
   bill: Bill;
@@ -54,7 +54,7 @@ async function captureInvoice(el: HTMLElement): Promise<Blob> {
 }
 
 const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
-  const shop: ShopInfo = storage.getShopInfo();
+  const shop: ShopInfo = useShop();
   const taxSummary = buildTaxSummary(bill);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);

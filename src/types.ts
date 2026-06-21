@@ -51,4 +51,5 @@ export interface Bill {
   customerName: string;
   customerPhone: string;
   paymentMode: PaymentMode;
+  operatorName?: string;
 }

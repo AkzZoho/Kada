@@ -1,16 +1,16 @@
 import React from 'react';
 import { Search, ScanLine, Minus, Plus, Trash2, ChevronLeft, Banknote, CreditCard, Smartphone, ShoppingCart } from 'lucide-react';
 import type { Product, CartItem, Bill, BillItem, PaymentMode } from '../types';
-import { storage } from '../storage';
 import BillView from './BillView';
 import QRScanner from './QRScanner';
 
 interface POSProps {
   products: Product[];
-  onBillSaved: () => void;
   operators: string[];
   operatorName: string;
   onOperatorChange: (name: string) => void;
+  nextBillNumber: () => Promise<string>;
+  onBillSaved: (bill: Bill) => Promise<void>;
 }
 
 interface Totals {
@@ -35,7 +35,7 @@ const PAY_ICONS: Record<PaymentMode, React.ReactNode> = {
   upi:  <Smartphone size={18} />,
 };
 
-const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorName, onOperatorChange }) => {
+const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperatorChange, nextBillNumber, onBillSaved }) => {
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('');
@@ -44,10 +44,10 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorNam
   const [discount, setDiscount] = React.useState('');
   const [paymentMode, setPaymentMode] = React.useState<PaymentMode>('cash');
   const [savedBill, setSavedBill] = React.useState<Bill | null>(null);
-  const [shopName] = React.useState(() => storage.getShopName());
   const [cartOpen, setCartOpen] = React.useState(false);
   const [scannerOpen, setScannerOpen] = React.useState(false);
   const [scanMsg, setScanMsg] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -125,28 +125,34 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorNam
     setTimeout(() => setScanMsg(''), 3000);
   }
 
-  function handleSaveBill() {
-    if (cart.length === 0) return;
-    const billItems: BillItem[] = cart.map((ci, idx) => {
-      const t = totals.items[idx];
-      return {
-        productId: ci.product.id, name: ci.product.name, price: ci.product.price,
-        quantity: ci.quantity, unit: ci.product.unit, gstRate: ci.product.gstRate,
-        taxableAmount: t.taxableAmount, cgst: t.cgst, sgst: t.sgst, lineTotal: t.lineTotal,
+  async function handleSaveBill() {
+    if (cart.length === 0 || saving) return;
+    setSaving(true);
+    try {
+      const billNumber = await nextBillNumber();
+      const billItems: BillItem[] = cart.map((ci, idx) => {
+        const t = totals.items[idx];
+        return {
+          productId: ci.product.id, name: ci.product.name, price: ci.product.price,
+          quantity: ci.quantity, unit: ci.product.unit, gstRate: ci.product.gstRate,
+          taxableAmount: t.taxableAmount, cgst: t.cgst, sgst: t.sgst, lineTotal: t.lineTotal,
+        };
+      });
+      const bill: Bill = {
+        id: crypto.randomUUID(),
+        billNumber,
+        date: new Date().toISOString(),
+        items: billItems,
+        operatorName,
+        subtotal: totals.subtotal, totalCGST: totals.totalCGST, totalSGST: totals.totalSGST,
+        totalGST: totals.totalGST, discount: totals.discountAmt, grandTotal: totals.grandTotal,
+        customerName: customerName.trim(), customerPhone: customerPhone.trim(), paymentMode,
       };
-    });
-    const bill: Bill = {
-      id: crypto.randomUUID(),
-      billNumber: storage.nextBillNumber(),
-      date: new Date().toISOString(),
-      items: billItems,
-      subtotal: totals.subtotal, totalCGST: totals.totalCGST, totalSGST: totals.totalSGST,
-      totalGST: totals.totalGST, discount: totals.discountAmt, grandTotal: totals.grandTotal,
-      customerName: customerName.trim(), customerPhone: customerPhone.trim(), paymentMode,
-    };
-    storage.saveBill(bill);
-    setSavedBill(bill);
-    onBillSaved();
+      await onBillSaved(bill);
+      setSavedBill(bill);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleBillViewClose() {
@@ -337,8 +343,8 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorNam
             <Trash2 size={15} style={{ marginRight: 4 }} />
             Clear
           </button>
-          <button className="btn btn-primary" onClick={handleSaveBill} disabled={cart.length === 0}>
-            Save &amp; Print Bill
+          <button className="btn btn-primary" onClick={handleSaveBill} disabled={cart.length === 0 || saving}>
+            {saving ? 'Saving…' : 'Save & Print Bill'}
           </button>
         </div>
       </div>
@@ -356,7 +362,7 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorNam
 
       {scannerOpen && <QRScanner onScan={handleQRScan} onClose={() => setScannerOpen(false)} />}
 
-      {savedBill && <BillView bill={savedBill} shopName={shopName} onClose={handleBillViewClose} />}
+      {savedBill && <BillView bill={savedBill} shopName="" onClose={handleBillViewClose} />}
     </div>
   );
 };
