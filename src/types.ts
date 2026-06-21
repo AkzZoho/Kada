@@ -1,4 +1,11 @@
 export type GSTRate = 0 | 5 | 12 | 18 | 28;
+
+export interface ShopInfo {
+  name: string;
+  address: string;
+  gstin: string;
+  phone: string;
+}
 export type PaymentMode = 'cash' | 'card' | 'upi';
 export type Screen = 'pos' | 'products' | 'history';
 

@@ -1,10 +1,11 @@
-import type { Bill, Product } from './types';
+import type { Bill, Product, ShopInfo } from './types';
 
 const KEYS = {
   products: 'pos_products',
   bills: 'pos_bills',
   counter: 'pos_bill_counter',
   shopName: 'pos_shop_name',
+  shopInfo: 'pos_shop_info',
 };
 
 function get<T>(key: string): T | null {
@@ -82,6 +83,13 @@ const SEED_BILLS: Bill[] = [
   makeBill('b5','BILL-0005',0,'Priya Krishnan','9562233441','cash', [{p:p5,qty:1},{p:p11,qty:2},{p:p9,qty:1}], 0),
 ];
 
+const DEFAULT_SHOP_INFO: ShopInfo = {
+  name: 'Anandha Stores',
+  address: 'Thrissur, Kerala',
+  gstin: '',
+  phone: '',
+};
+
 export const storage = {
   getProducts(): Product[] {
     return get<Product[]>(KEYS.products) ?? [];
@@ -109,14 +117,23 @@ export const storage = {
     return `BILL-${count.toString().padStart(4, '0')}`;
   },
 
-  getShopName(): string {
-    return get<string>(KEYS.shopName) ?? 'My Shop';
+  getShopInfo(): ShopInfo {
+    const saved = get<ShopInfo>(KEYS.shopInfo);
+    if (saved) return saved;
+    // migrate from old shopName key
+    const oldName = get<string>(KEYS.shopName);
+    return oldName ? { ...DEFAULT_SHOP_INFO, name: oldName } : DEFAULT_SHOP_INFO;
   },
-  setShopName(name: string) {
-    set(KEYS.shopName, name);
+  setShopInfo(info: ShopInfo) {
+    set(KEYS.shopInfo, info);
+    set(KEYS.shopName, info.name); // backwards compat
   },
 
-  /** Seeds products + bills on first load (won't overwrite existing data). */
+  // kept for POS.tsx compat
+  getShopName(): string {
+    return this.getShopInfo().name;
+  },
+
   seedIfEmpty() {
     if (this.getProducts().length === 0) {
       set(KEYS.products, SEED_PRODUCTS);
@@ -125,9 +142,9 @@ export const storage = {
       set(KEYS.bills, SEED_BILLS);
       set(KEYS.counter, SEED_BILLS.length);
     }
-    if (!get<string>(KEYS.shopName)) {
-      set(KEYS.shopName, 'Anandha Stores');
+    if (!get<ShopInfo>(KEYS.shopInfo) && !get<string>(KEYS.shopName)) {
+      set(KEYS.shopInfo, DEFAULT_SHOP_INFO);
+      set(KEYS.shopName, DEFAULT_SHOP_INFO.name);
     }
   },
 };
-

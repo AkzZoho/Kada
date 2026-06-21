@@ -12,8 +12,8 @@ interface BillHistoryProps {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatDateShort(isoString: string): string {
-  const date = new Date(isoString);
-  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  const d = new Date(isoString);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
@@ -45,18 +45,15 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
         </div>
       </div>
 
-      <div className="history-filters">
-        <div className="search-bar" style={{ flex: 1 }}>
-          <Search size={16} color="var(--text-muted)" />
-          <input
-            type="text"
-            placeholder="Search by bill number or customer..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="search-input"
-            style={{ border: 'none', padding: '11px 0', background: 'transparent', outline: 'none', flex: 1 }}
-          />
-        </div>
+      <div className="search-bar" style={{ marginBottom: 12 }}>
+        <Search size={16} color="var(--text-muted)" />
+        <input
+          type="text"
+          placeholder="Search by bill number or customer..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', padding: '11px 0', fontSize: 14 }}
+        />
       </div>
 
       <div className="stats-line">
@@ -73,20 +70,19 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
         <div className="bill-list">
           {filtered.map((bill) => (
             <div key={bill.id} className="bill-card" onClick={() => setSelectedBill(bill)}>
-              <div className="bill-info">
-                <span className="bill-num">{bill.billNumber}</span>
-                <div className="bill-details">
-                  <span className="bill-customer">{bill.customerName || 'Walk-in Customer'}</span>
-                  <span className="bill-meta-text">
-                    {formatDateShort(bill.date)} &middot; {bill.items.length}{' '}
-                    {bill.items.length === 1 ? 'item' : 'items'}
-                  </span>
+              <div className="bill-card-left">
+                <div className="bill-card-top">
+                  <span className="bill-num">{bill.billNumber}</span>
+                  <span className={`pay-chip ${bill.paymentMode}`}>{bill.paymentMode.toUpperCase()}</span>
+                </div>
+                <div className="bill-customer">{bill.customerName || 'Walk-in Customer'}</div>
+                <div className="bill-meta-text">
+                  {formatDateShort(bill.date)} &middot; {bill.items.length} {bill.items.length === 1 ? 'item' : 'items'}
                 </div>
               </div>
-              <div className="bill-amount">
-                <span className="bill-total">₹{bill.grandTotal.toFixed(2)}</span>
-                <span className={`pay-chip ${bill.paymentMode}`}>{bill.paymentMode.toUpperCase()}</span>
-                <button className="icon-btn del" title="Delete bill" onClick={(e) => handleDelete(e, bill.id)}>
+              <div className="bill-card-right">
+                <div className="bill-total">₹{bill.grandTotal.toFixed(2)}</div>
+                <button className="icon-btn del" title="Delete" onClick={(e) => handleDelete(e, bill.id)}>
                   <Trash2 size={13} />
                 </button>
               </div>
