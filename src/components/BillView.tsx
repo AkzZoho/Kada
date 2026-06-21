@@ -73,6 +73,13 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
   const shop: ShopInfo = storage.getShopInfo();
   const taxSummary = buildTaxSummary(bill);
 
+  function handlePrint() {
+    const prev = document.title;
+    document.title = bill.billNumber;
+    window.print();
+    document.title = prev;
+  }
+
   function handleShare() {
     const text = buildShareText(bill, shop);
     if ('share' in navigator) {
@@ -230,7 +237,7 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
             <Share2 size={15} />
             {'share' in navigator ? 'Share' : 'WhatsApp'}
           </button>
-          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => window.print()}>
+          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={handlePrint}>
             <Printer size={15} /> Print
           </button>
         </div>

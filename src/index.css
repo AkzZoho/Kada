@@ -598,6 +598,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Buttons ── */
 .action-btns { display: flex; gap: 8px; }
+.action-btns .btn-primary { flex: 1; }
 
 .btn {
   padding: 10px 18px;
@@ -615,7 +616,6 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary {
   background: var(--green);
   color: #fff;
-  flex: 1;
   box-shadow: 0 2px 6px rgba(42,138,87,0.3);
 }
 .btn-primary:hover {
@@ -1402,33 +1402,37 @@ tr:hover td { background: rgba(42,138,87,0.04); }
 
 /* ── Print ── */
 @media print {
+  /* Kill the app background so it doesn't bleed through */
+  html, body { background: white !important; }
+
+  /* Hide everything; overlay + children made visible below */
   body > * { visibility: hidden; }
   .modal-overlay, .modal-overlay * { visibility: visible; }
+
   .modal-overlay {
     position: fixed; inset: 0;
-    background: #fff;
+    background: white !important;
     display: block;
     padding: 0;
     overflow: visible;
   }
   .modal {
-    box-shadow: none;
-    max-height: none;
-    border: none;
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0;
-    overflow: visible;
+    box-shadow: none !important;
+    max-height: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
   }
   .no-print { display: none !important; }
+
+  /* Force color fills (logo circle, chips, etc.) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
   /* Invoice print */
   .invoice-body { overflow: visible !important; max-height: none !important; }
   .invoice { padding: 16px; }
-  .inv-logo { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .inv-tax-summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .pay-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .inv-label { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* QR label print */
   .qr-modal .modal-body { display: flex; justify-content: center; padding: 20px; }
