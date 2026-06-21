@@ -1401,38 +1401,59 @@ tr:hover td { background: rgba(42,138,87,0.04); }
 .bottom-nav-btn.active { color: var(--gold); }
 
 /* ── Print ── */
-@media print {
-  /* Kill the app background so it doesn't bleed through */
-  html, body { background: white !important; }
+@page { size: auto; margin: 10mm; }
 
-  /* Hide everything; overlay + children made visible below */
+@media print {
+  /* White page — kill app background */
+  html, body {
+    background: white !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything; overlay + children revealed below */
   body > * { visibility: hidden; }
   .modal-overlay, .modal-overlay * { visibility: visible; }
 
   .modal-overlay {
-    position: fixed; inset: 0;
+    position: fixed !important;
+    inset: 0 !important;
     background: white !important;
-    display: block;
-    padding: 0;
-    overflow: visible;
-  }
-  .modal {
-    box-shadow: none !important;
-    max-height: none !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 0 !important;
+    display: block !important;
+    padding: 0 !important;
     overflow: visible !important;
   }
+
+  /* Invoice modal fills the full printed page */
+  .modal {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+  }
+
   .no-print { display: none !important; }
 
   /* Force color fills (logo circle, chips, etc.) */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-  /* Invoice print */
-  .invoice-body { overflow: visible !important; max-height: none !important; }
-  .invoice { padding: 16px; }
+  /* Invoice body: no scroll cap */
+  .invoice-body {
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+  /* Tighten spacing so invoice fits a single page */
+  .invoice { padding: 12px 16px; font-size: 12.5px; }
+  .inv-divider { margin: 8px 0; }
+  .inv-shop-header { margin-bottom: 10px; }
+  .inv-item { padding: 6px 0; }
+  .inv-footer { margin-top: 12px; }
 
   /* QR label print */
   .qr-modal .modal-body { display: flex; justify-content: center; padding: 20px; }
