@@ -1299,6 +1299,11 @@ tr:hover td { background: rgba(42,138,87,0.04); }
     gap: 12px;
   }
 
+  /* iOS Safari zooms when input font-size < 16px — prevent that */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
   /* Modal safe area */
   .modal-body { padding: 16px; }
   .modal-footer { padding: 14px 16px; }

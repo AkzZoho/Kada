@@ -15,7 +15,9 @@ export default function App() {
   const [shopInput, setShopInput] = useState('');
 
   useEffect(() => {
+    storage.seedIfEmpty();
     setProducts(storage.getProducts());
+    setShopName(storage.getShopName());
   }, []);
 
   function handleProductsUpdate(updated: Product[]) {
