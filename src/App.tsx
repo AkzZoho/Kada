@@ -10,10 +10,10 @@ import Settings from './components/Settings';
 import './index.css';
 
 const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
-  { id: 'pos',      Icon: Receipt,    label: 'POS' },
-  { id: 'products', Icon: Package,    label: 'Products' },
+  { id: 'pos',      Icon: Receipt,       label: 'POS' },
+  { id: 'products', Icon: Package,       label: 'Products' },
   { id: 'history',  Icon: ClipboardList, label: 'History' },
-  { id: 'settings', Icon: Settings2,  label: 'Settings' },
+  { id: 'settings', Icon: Settings2,     label: 'Settings' },
 ];
 
 export default function App() {
@@ -24,16 +24,19 @@ export default function App() {
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [shopInfo, setShopInfo] = useState<ShopInfo>(() => storage.getShopInfo());
+  const [operators, setOperators] = useState<string[]>([]);
   const [operatorPrompt, setOperatorPrompt] = useState(false);
-  const [operatorInput, setOperatorInput] = useState('');
+  const [selectedOp, setSelectedOp] = useState('');
 
   useEffect(() => {
     storage.seedIfEmpty();
     setProducts(storage.getProducts());
     const info = storage.getShopInfo();
+    const ops = storage.getOperators();
     setShopInfo(info);
-    // First-time operator name setup
-    if (!info.operatorName) {
+    setOperators(ops);
+    // Show prompt when operators are defined but none is selected for this session
+    if (ops.length > 0 && !info.operatorName) {
       setOperatorPrompt(true);
     }
   }, []);
@@ -43,14 +46,14 @@ export default function App() {
     setProducts(updated);
   }
 
-  function handleShopInfoSave(info: ShopInfo) {
+  function handleSettingsSave(info: ShopInfo, ops: string[]) {
     setShopInfo(info);
+    setOperators(ops);
   }
 
-  function saveOperator() {
-    const name = operatorInput.trim();
-    if (!name) return;
-    const info: ShopInfo = { ...shopInfo, operatorName: name };
+  function confirmOperator() {
+    if (!selectedOp) return;
+    const info: ShopInfo = { ...shopInfo, operatorName: selectedOp };
     storage.setShopInfo(info);
     setShopInfo(info);
     setOperatorPrompt(false);
@@ -78,7 +81,7 @@ export default function App() {
             <BillHistory bills={storage.getBills()} onDelete={(id) => { storage.deleteBill(id); }} />
           )}
           {screen === 'settings' && (
-            <Settings shopInfo={shopInfo} onSave={handleShopInfoSave} />
+            <Settings shopInfo={shopInfo} operators={operators} onSave={handleSettingsSave} />
           )}
         </div>
       </div>
@@ -92,7 +95,7 @@ export default function App() {
         ))}
       </nav>
 
-      {/* First-time operator name prompt */}
+      {/* Operator selection prompt (shown when operators exist but none active) */}
       {operatorPrompt && (
         <div className="modal-overlay" onClick={() => {}}>
           <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
@@ -101,25 +104,24 @@ export default function App() {
               <button className="modal-close" onClick={() => setOperatorPrompt(false)}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
-                Enter your name. This is saved and you won't be asked again.
-              </p>
               <div className="form-field">
-                <label>Your Name</label>
-                <input
+                <label>Select Operator</label>
+                <select
+                  value={selectedOp}
+                  onChange={e => setSelectedOp(e.target.value)}
                   autoFocus
-                  type="text"
-                  value={operatorInput}
-                  onChange={e => setOperatorInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && saveOperator()}
-                  placeholder="e.g. Rajan"
-                />
+                >
+                  <option value="">— Choose —</option>
+                  {operators.map(op => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setOperatorPrompt(false)}>Skip</button>
-              <button className="btn btn-primary" onClick={saveOperator} disabled={!operatorInput.trim()}>
-                Save &amp; Continue
+              <button className="btn btn-primary" onClick={confirmOperator} disabled={!selectedOp}>
+                Start Shift
               </button>
             </div>
           </div>

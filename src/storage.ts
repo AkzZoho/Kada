@@ -6,6 +6,7 @@ const KEYS = {
   counter: 'pos_bill_counter',
   shopName: 'pos_shop_name',
   shopInfo: 'pos_shop_info',
+  operators: 'pos_operators',
 };
 
 function get<T>(key: string): T | null {
@@ -133,6 +134,13 @@ export const storage = {
   // kept for POS.tsx compat
   getShopName(): string {
     return this.getShopInfo().name;
+  },
+
+  getOperators(): string[] {
+    return get<string[]>(KEYS.operators) ?? [];
+  },
+  saveOperators(ops: string[]) {
+    set(KEYS.operators, ops);
   },
 
   seedIfEmpty() {

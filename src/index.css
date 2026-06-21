@@ -1106,6 +1106,52 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   color: var(--text-muted);
   margin-top: 8px;
 }
+/* Operator list */
+.op-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.op-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.op-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.op-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.op-add-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: 'Work Sans', sans-serif;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.op-add-input:focus { border-color: var(--green); }
+.op-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .settings-save-row {
   display: flex;
   justify-content: flex-end;
