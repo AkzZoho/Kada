@@ -196,26 +196,53 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
           ))}
         </div>
 
+        {/* Mini cart bar — mobile: persistent total, desktop: hidden */}
+        {cart.length > 0 && (
+          <div className="mini-cart-bar" onClick={() => setCartOpen(true)}>
+            <span className="mcb-left">
+              <span className="mcb-dot" />
+              {totalItemCount} item{totalItemCount !== 1 ? 's' : ''}
+            </span>
+            <span className="mcb-right">₹{totals.grandTotal.toFixed(2)} &rsaquo; View Cart</span>
+          </div>
+        )}
+
         <div className="product-grid">
           {filtered.length === 0 ? (
             <div className="empty-table" style={{ gridColumn: '1 / -1' }}>
               No products found.
             </div>
           ) : (
-            filtered.map((product) => (
-              <div
-                key={product.id}
-                className="product-card"
-                onClick={() => addToCart(product)}
-              >
-                <div className="product-name">{product.name}</div>
-                {product.category && (
-                  <div className="product-category">{product.category}</div>
-                )}
-                <div className="product-price">₹{product.price.toFixed(2)}</div>
-                <div className="product-unit">per {product.unit}</div>
-              </div>
-            ))
+            filtered.map((product) => {
+              const cartItem = cart.find(ci => ci.product.id === product.id);
+              return (
+                <div
+                  key={product.id}
+                  className={`product-card${cartItem ? ' in-cart' : ''}`}
+                  onClick={() => { if (!cartItem) addToCart(product); }}
+                >
+                  <div className="pc-top">
+                    {product.category
+                      ? <span className="prod-cat">{product.category}</span>
+                      : <span />}
+                    {cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
+                  </div>
+                  <div className="prod-name">{product.name}</div>
+                  <div className="pc-bottom">
+                    <span className="prod-price">₹{product.price.toFixed(2)}</span>
+                    {cartItem ? (
+                      <div className="pc-qty" onClick={e => e.stopPropagation()}>
+                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, -1)}>−</button>
+                        <span className="pc-qty-num">{cartItem.quantity}</span>
+                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, 1)}>+</button>
+                      </div>
+                    ) : (
+                      <span className="prod-gst">{product.gstRate > 0 ? `GST ${product.gstRate}%` : 'No GST'}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -228,22 +255,6 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
           <span>Cart ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
         </div>
         <div className="cart-card">
-          {/* Customer Info */}
-          <div className="customer-row">
-            <input
-              type="text"
-              placeholder="Customer Name"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-            />
-          </div>
-
           {/* Cart Header */}
           <div className="cart-header">
             <span className="cart-title">Cart</span>
@@ -252,7 +263,7 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
 
           {/* Cart Items */}
           {cart.length === 0 ? (
-            <div className="cart-empty">No items in cart. Tap a product to add.</div>
+            <div className="cart-empty">Tap any product to add it here.</div>
           ) : (
             <div className="cart-items">
               {cart.map((ci) => {
@@ -266,19 +277,9 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
                       </span>
                     </div>
                     <div className="cart-item-controls">
-                      <button
-                        className="qty-btn"
-                        onClick={() => updateQty(ci.product.id, -1)}
-                      >
-                        −
-                      </button>
+                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, -1)}>−</button>
                       <span className="qty-val">{ci.quantity}</span>
-                      <button
-                        className="qty-btn"
-                        onClick={() => updateQty(ci.product.id, 1)}
-                      >
-                        +
-                      </button>
+                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, 1)}>+</button>
                     </div>
                   </div>
                 );
@@ -319,6 +320,22 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
               </div>
             </div>
           )}
+
+          {/* Customer Info */}
+          <div className="customer-row">
+            <input
+              type="text"
+              placeholder="Customer name (optional)"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+            <input
+              type="tel"
+              placeholder="Phone"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+            />
+          </div>
 
           {/* Payment Modes */}
           <div className="payment-modes">
