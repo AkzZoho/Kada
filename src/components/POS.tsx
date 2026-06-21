@@ -45,6 +45,14 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
   const [cartOpen, setCartOpen] = React.useState(false);
   const [scannerOpen, setScannerOpen] = React.useState(false);
   const [scanMsg, setScanMsg] = React.useState('');
+  const [operators] = React.useState(() => storage.getOperators());
+  const [operatorName, setOperatorName] = React.useState(() => storage.getShopInfo().operatorName);
+
+  function handleOperatorChange(name: string) {
+    const info = storage.getShopInfo();
+    storage.setShopInfo({ ...info, operatorName: name });
+    setOperatorName(name);
+  }
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -157,6 +165,22 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
     <div className="pos-layout">
       {/* Left: Product Panel */}
       <div className="product-panel">
+        {operators.length > 0 && (
+          <div className="pos-operator-bar">
+            <span className="pos-operator-label">Operator</span>
+            <select
+              className="pos-operator-select"
+              value={operatorName}
+              onChange={e => handleOperatorChange(e.target.value)}
+            >
+              <option value="">— Select —</option>
+              {operators.map(op => (
+                <option key={op} value={op}>{op}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="search-bar">
           <Search size={16} color="var(--text-muted)" />
           <input
