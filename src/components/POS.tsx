@@ -8,6 +8,9 @@ import QRScanner from './QRScanner';
 interface POSProps {
   products: Product[];
   onBillSaved: () => void;
+  operators: string[];
+  operatorName: string;
+  onOperatorChange: (name: string) => void;
 }
 
 interface Totals {
@@ -32,7 +35,7 @@ const PAY_ICONS: Record<PaymentMode, React.ReactNode> = {
   upi:  <Smartphone size={18} />,
 };
 
-const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
+const POS: React.FC<POSProps> = ({ products, onBillSaved, operators, operatorName, onOperatorChange }) => {
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('');
@@ -45,14 +48,6 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
   const [cartOpen, setCartOpen] = React.useState(false);
   const [scannerOpen, setScannerOpen] = React.useState(false);
   const [scanMsg, setScanMsg] = React.useState('');
-  const [operators] = React.useState(() => storage.getOperators());
-  const [operatorName, setOperatorName] = React.useState(() => storage.getShopInfo().operatorName);
-
-  function handleOperatorChange(name: string) {
-    const info = storage.getShopInfo();
-    storage.setShopInfo({ ...info, operatorName: name });
-    setOperatorName(name);
-  }
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -165,21 +160,23 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
     <div className="pos-layout">
       {/* Left: Product Panel */}
       <div className="product-panel">
-        {operators.length > 0 && (
-          <div className="pos-operator-bar">
-            <span className="pos-operator-label">Operator</span>
+        <div className="pos-operator-bar">
+          <span className="pos-operator-label">Operator</span>
+          {operators.length > 0 ? (
             <select
               className="pos-operator-select"
               value={operatorName}
-              onChange={e => handleOperatorChange(e.target.value)}
+              onChange={e => onOperatorChange(e.target.value)}
             >
               <option value="">— Select —</option>
               {operators.map(op => (
                 <option key={op} value={op}>{op}</option>
               ))}
             </select>
-          </div>
-        )}
+          ) : (
+            <span className="pos-operator-empty">No operators — add in Settings</span>
+          )}
+        </div>
 
         <div className="search-bar">
           <Search size={16} color="var(--text-muted)" />

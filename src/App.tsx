@@ -51,11 +51,15 @@ export default function App() {
     setOperators(ops);
   }
 
-  function confirmOperator() {
-    if (!selectedOp) return;
-    const info: ShopInfo = { ...shopInfo, operatorName: selectedOp };
+  function handleOperatorChange(name: string) {
+    const info: ShopInfo = { ...shopInfo, operatorName: name };
     storage.setShopInfo(info);
     setShopInfo(info);
+  }
+
+  function confirmOperator() {
+    if (!selectedOp) return;
+    handleOperatorChange(selectedOp);
     setOperatorPrompt(false);
   }
 
@@ -75,7 +79,15 @@ export default function App() {
       />
       <div className="main">
         <div className="screen">
-          {screen === 'pos' && <POS products={products} onBillSaved={() => {}} />}
+          {screen === 'pos' && (
+            <POS
+              products={products}
+              onBillSaved={() => {}}
+              operators={operators}
+              operatorName={shopInfo.operatorName}
+              onOperatorChange={handleOperatorChange}
+            />
+          )}
           {screen === 'products' && <Products products={products} onUpdate={handleProductsUpdate} />}
           {screen === 'history' && (
             <BillHistory bills={storage.getBills()} onDelete={(id) => { storage.deleteBill(id); }} />
