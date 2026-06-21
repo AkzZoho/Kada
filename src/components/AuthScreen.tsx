@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const AuthScreen: React.FC = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -7,26 +8,19 @@ const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setInfo('');
     setLoading(true);
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) setError(error.message);
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) {
-          setError(error.message);
-        } else if (!data.session) {
-          setInfo('Check your email for a confirmation link, then come back to log in.');
-        }
-        // If session exists, onAuthStateChange in App.tsx will handle the redirect
+        await createUserWithEmailAndPassword(auth, email, password);
       }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -44,13 +38,13 @@ const AuthScreen: React.FC = () => {
         <div className="auth-tabs">
           <button
             className={`auth-tab${mode === 'login' ? ' active' : ''}`}
-            onClick={() => { setMode('login'); setError(''); setInfo(''); }}
+            onClick={() => { setMode('login'); setError(''); }}
           >
             Log In
           </button>
           <button
             className={`auth-tab${mode === 'signup' ? ' active' : ''}`}
-            onClick={() => { setMode('signup'); setError(''); setInfo(''); }}
+            onClick={() => { setMode('signup'); setError(''); }}
           >
             Sign Up
           </button>
@@ -81,7 +75,6 @@ const AuthScreen: React.FC = () => {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
-          {info && <div className="auth-info">{info}</div>}
 
           <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
             {loading ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Create Account'}
