@@ -1,7 +1,9 @@
 import React from 'react';
+import { Search, ScanLine, Minus, Plus, Trash2, ChevronLeft, Banknote, CreditCard, Smartphone, ShoppingCart } from 'lucide-react';
 import type { Product, CartItem, Bill, BillItem, PaymentMode } from '../types';
 import { storage } from '../storage';
 import BillView from './BillView';
+import QRScanner from './QRScanner';
 
 interface POSProps {
   products: Product[];
@@ -24,6 +26,12 @@ interface Totals {
   grandTotal: number;
 }
 
+const PAY_ICONS: Record<PaymentMode, React.ReactNode> = {
+  cash: <Banknote size={18} />,
+  card: <CreditCard size={18} />,
+  upi:  <Smartphone size={18} />,
+};
+
 const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [search, setSearch] = React.useState('');
@@ -35,12 +43,12 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
   const [savedBill, setSavedBill] = React.useState<Bill | null>(null);
   const [shopName] = React.useState(() => storage.getShopName());
   const [cartOpen, setCartOpen] = React.useState(false);
+  const [scannerOpen, setScannerOpen] = React.useState(false);
+  const [scanMsg, setScanMsg] = React.useState('');
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
-    products.forEach((p) => {
-      if (p.category) cats.add(p.category);
-    });
+    products.forEach((p) => { if (p.category) cats.add(p.category); });
     return Array.from(cats).sort();
   }, [products]);
 
@@ -55,59 +63,34 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
 
   const totals: Totals = React.useMemo(() => {
     const discountAmt = Math.max(0, parseFloat(discount) || 0);
-
     const itemTotals = cart.map((ci) => {
       const rate = ci.product.gstRate;
       const taxableAmount = (ci.product.price * ci.quantity) / (1 + rate / 100);
       const cgst = (taxableAmount * rate) / 200;
       const sgst = (taxableAmount * rate) / 200;
-      const lineTotal = taxableAmount + cgst + sgst;
-      return {
-        productId: ci.product.id,
-        taxableAmount,
-        cgst,
-        sgst,
-        lineTotal,
-      };
+      return { productId: ci.product.id, taxableAmount, cgst, sgst, lineTotal: taxableAmount + cgst + sgst };
     });
-
-    const subtotal = itemTotals.reduce((sum, i) => sum + i.taxableAmount, 0);
-    const totalCGST = itemTotals.reduce((sum, i) => sum + i.cgst, 0);
-    const totalSGST = itemTotals.reduce((sum, i) => sum + i.sgst, 0);
+    const subtotal = itemTotals.reduce((s, i) => s + i.taxableAmount, 0);
+    const totalCGST = itemTotals.reduce((s, i) => s + i.cgst, 0);
+    const totalSGST = itemTotals.reduce((s, i) => s + i.sgst, 0);
     const totalGST = totalCGST + totalSGST;
     const grandTotal = Math.max(0, subtotal + totalGST - discountAmt);
-
-    return {
-      items: itemTotals,
-      subtotal,
-      totalCGST,
-      totalSGST,
-      totalGST,
-      discountAmt,
-      grandTotal,
-    };
+    return { items: itemTotals, subtotal, totalCGST, totalSGST, totalGST, discountAmt, grandTotal };
   }, [cart, discount]);
 
   function addToCart(product: Product) {
     setCart((prev) => {
       const existing = prev.find((ci) => ci.product.id === product.id);
-      if (existing) {
-        return prev.map((ci) =>
-          ci.product.id === product.id ? { ...ci, quantity: ci.quantity + 1 } : ci
-        );
-      }
+      if (existing) return prev.map((ci) => ci.product.id === product.id ? { ...ci, quantity: ci.quantity + 1 } : ci);
       return [...prev, { product, quantity: 1 }];
     });
   }
 
   function updateQty(productId: string, delta: number) {
-    setCart((prev) => {
-      return prev
-        .map((ci) =>
-          ci.product.id === productId ? { ...ci, quantity: ci.quantity + delta } : ci
-        )
-        .filter((ci) => ci.quantity > 0);
-    });
+    setCart((prev) =>
+      prev.map((ci) => ci.product.id === productId ? { ...ci, quantity: ci.quantity + delta } : ci)
+          .filter((ci) => ci.quantity > 0)
+    );
   }
 
   function clearCart() {
@@ -118,41 +101,46 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
     setPaymentMode('cash');
   }
 
+  function handleQRScan(text: string) {
+    setScannerOpen(false);
+    // QR format: "KADA:{id}" (first line)
+    const firstLine = text.split('\n')[0].trim();
+    let product: Product | undefined;
+    if (firstLine.startsWith('KADA:')) {
+      const id = firstLine.slice(5);
+      product = products.find((p) => p.id === id);
+    } else {
+      // fallback: match by name
+      product = products.find((p) => p.name.toLowerCase() === firstLine.toLowerCase());
+    }
+    if (product) {
+      addToCart(product);
+      setScanMsg(`Added: ${product.name}`);
+    } else {
+      setScanMsg('Product not found for this QR code.');
+    }
+    setTimeout(() => setScanMsg(''), 3000);
+  }
+
   function handleSaveBill() {
     if (cart.length === 0) return;
-
     const billItems: BillItem[] = cart.map((ci, idx) => {
       const t = totals.items[idx];
       return {
-        productId: ci.product.id,
-        name: ci.product.name,
-        price: ci.product.price,
-        quantity: ci.quantity,
-        unit: ci.product.unit,
-        gstRate: ci.product.gstRate,
-        taxableAmount: t.taxableAmount,
-        cgst: t.cgst,
-        sgst: t.sgst,
-        lineTotal: t.lineTotal,
+        productId: ci.product.id, name: ci.product.name, price: ci.product.price,
+        quantity: ci.quantity, unit: ci.product.unit, gstRate: ci.product.gstRate,
+        taxableAmount: t.taxableAmount, cgst: t.cgst, sgst: t.sgst, lineTotal: t.lineTotal,
       };
     });
-
     const bill: Bill = {
       id: crypto.randomUUID(),
       billNumber: storage.nextBillNumber(),
       date: new Date().toISOString(),
       items: billItems,
-      subtotal: totals.subtotal,
-      totalCGST: totals.totalCGST,
-      totalSGST: totals.totalSGST,
-      totalGST: totals.totalGST,
-      discount: totals.discountAmt,
-      grandTotal: totals.grandTotal,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      paymentMode,
+      subtotal: totals.subtotal, totalCGST: totals.totalCGST, totalSGST: totals.totalSGST,
+      totalGST: totals.totalGST, discount: totals.discountAmt, grandTotal: totals.grandTotal,
+      customerName: customerName.trim(), customerPhone: customerPhone.trim(), paymentMode,
     };
-
     storage.saveBill(bill);
     setSavedBill(bill);
     onBillSaved();
@@ -170,48 +158,44 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
       {/* Left: Product Panel */}
       <div className="product-panel">
         <div className="search-bar">
+          <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <button className="scan-btn" onClick={() => setScannerOpen(true)} title="Scan QR code">
+            <ScanLine size={18} />
+          </button>
         </div>
 
+        {scanMsg && (
+          <div className={`scan-toast${scanMsg.startsWith('Added') ? ' scan-toast-ok' : ' scan-toast-err'}`}>
+            {scanMsg}
+          </div>
+        )}
+
         <div className="cat-tabs">
-          <button
-            className={`cat-tab${selectedCategory === '' ? ' active' : ''}`}
-            onClick={() => setSelectedCategory('')}
-          >
-            All
-          </button>
+          <button className={`cat-tab${selectedCategory === '' ? ' active' : ''}`} onClick={() => setSelectedCategory('')}>All</button>
           {categories.map((cat) => (
-            <button
-              key={cat}
-              className={`cat-tab${selectedCategory === cat ? ' active' : ''}`}
-              onClick={() => setSelectedCategory(cat)}
-            >
-              {cat}
-            </button>
+            <button key={cat} className={`cat-tab${selectedCategory === cat ? ' active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
           ))}
         </div>
 
-        {/* Mini cart bar — mobile: persistent total, desktop: hidden */}
         {cart.length > 0 && (
           <div className="mini-cart-bar" onClick={() => setCartOpen(true)}>
             <span className="mcb-left">
               <span className="mcb-dot" />
               {totalItemCount} item{totalItemCount !== 1 ? 's' : ''}
             </span>
-            <span className="mcb-right">₹{totals.grandTotal.toFixed(2)} &rsaquo; View Cart</span>
+            <span className="mcb-right">₹{totals.grandTotal.toFixed(2)} › View Cart</span>
           </div>
         )}
 
         <div className="product-grid">
           {filtered.length === 0 ? (
-            <div className="empty-table" style={{ gridColumn: '1 / -1' }}>
-              No products found.
-            </div>
+            <div className="empty-table" style={{ gridColumn: '1 / -1' }}>No products found.</div>
           ) : (
             filtered.map((product) => {
               const cartItem = cart.find(ci => ci.product.id === product.id);
@@ -222,9 +206,7 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
                   onClick={() => { if (!cartItem) addToCart(product); }}
                 >
                   <div className="pc-top">
-                    {product.category
-                      ? <span className="prod-cat">{product.category}</span>
-                      : <span />}
+                    {product.category ? <span className="prod-cat">{product.category}</span> : <span />}
                     {cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
                   </div>
                   <div className="prod-name">{product.name}</div>
@@ -232,9 +214,9 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
                     <span className="prod-price">₹{product.price.toFixed(2)}</span>
                     {cartItem ? (
                       <div className="pc-qty" onClick={e => e.stopPropagation()}>
-                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, -1)}>−</button>
+                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, -1)}><Minus size={12} /></button>
                         <span className="pc-qty-num">{cartItem.quantity}</span>
-                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, 1)}>+</button>
+                        <button className="pc-qty-btn" onClick={() => updateQty(product.id, 1)}><Plus size={12} /></button>
                       </div>
                     ) : (
                       <span className="prod-gst">{product.gstRate > 0 ? `GST ${product.gstRate}%` : 'No GST'}</span>
@@ -247,21 +229,19 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
         </div>
       </div>
 
-      {/* Right: Cart Panel (+ mobile full-screen when open) */}
+      {/* Right: Cart Panel */}
       <div className={`cart-panel${cartOpen ? ' mobile-open' : ''}`}>
-        {/* Mobile top bar */}
         <div className="cart-mobile-bar">
-          <button onClick={() => setCartOpen(false)}>‹</button>
+          <button onClick={() => setCartOpen(false)}><ChevronLeft size={22} /></button>
           <span>Cart ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
         </div>
+
         <div className="cart-card">
-          {/* Cart Header */}
           <div className="cart-header">
             <span className="cart-title">Cart</span>
             <span className="cart-count">{totalItemCount} {totalItemCount === 1 ? 'item' : 'items'}</span>
           </div>
 
-          {/* Cart Items */}
           {cart.length === 0 ? (
             <div className="cart-empty">Tap any product to add it here.</div>
           ) : (
@@ -272,14 +252,12 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
                   <div key={ci.product.id} className="cart-item">
                     <div className="cart-item-info">
                       <span className="cart-item-name">{ci.product.name}</span>
-                      <span className="cart-item-price">
-                        ₹{t ? t.lineTotal.toFixed(2) : '0.00'}
-                      </span>
+                      <span className="cart-item-price">₹{t ? t.lineTotal.toFixed(2) : '0.00'}</span>
                     </div>
                     <div className="cart-item-controls">
-                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, -1)}>−</button>
+                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, -1)}><Minus size={13} /></button>
                       <span className="qty-val">{ci.quantity}</span>
-                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, 1)}>+</button>
+                      <button className="qty-btn" onClick={() => updateQty(ci.product.id, 1)}><Plus size={13} /></button>
                     </div>
                   </div>
                 );
@@ -287,7 +265,6 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
             </div>
           )}
 
-          {/* Bill Summary */}
           {cart.length > 0 && (
             <div className="bill-summary">
               <div className="summary-row">
@@ -305,13 +282,9 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
               <div className="summary-row discount-row">
                 <span>Discount (₹)</span>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  placeholder="0.00"
-                  className="discount-input"
+                  type="number" min="0" step="0.01"
+                  value={discount} onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0.00" className="discount-input"
                 />
               </div>
               <div className="summary-row grand-total-row">
@@ -323,68 +296,46 @@ const POS: React.FC<POSProps> = ({ products, onBillSaved }) => {
 
           {/* Customer Info */}
           <div className="customer-row">
-            <input
-              type="text"
-              placeholder="Customer name (optional)"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-            />
+            <input type="text" placeholder="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+            <input type="tel" placeholder="Phone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
           </div>
 
           {/* Payment Modes */}
           <div className="payment-modes">
             {(['cash', 'card', 'upi'] as PaymentMode[]).map((mode) => (
-              <button
-                key={mode}
-                className={`pay-mode-btn${paymentMode === mode ? ' active' : ''}`}
-                onClick={() => setPaymentMode(mode)}
-              >
-                {mode === 'cash' && '💵'}
-                {mode === 'card' && '💳'}
-                {mode === 'upi' && '📱'}
-                {' '}{mode.charAt(0).toUpperCase() + mode.slice(1)}
+              <button key={mode} className={`pay-mode-btn${paymentMode === mode ? ' active' : ''}`} onClick={() => setPaymentMode(mode)}>
+                {PAY_ICONS[mode]}
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="action-btns">
           <button className="btn btn-ghost" onClick={clearCart} disabled={cart.length === 0}>
+            <Trash2 size={15} style={{ marginRight: 4 }} />
             Clear
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSaveBill}
-            disabled={cart.length === 0}
-          >
+          <button className="btn btn-primary" onClick={handleSaveBill} disabled={cart.length === 0}>
             Save &amp; Print Bill
           </button>
         </div>
       </div>
 
-      {/* Cart FAB (mobile only, shown when cart has items) */}
+      {/* Cart FAB (mobile only) */}
       {cart.length > 0 && !cartOpen && (
         <button className="cart-fab" onClick={() => setCartOpen(true)}>
-          <span>{totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in cart</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ShoppingCart size={18} />
+            {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'}
+          </span>
           <span>₹{totals.grandTotal.toFixed(2)} →</span>
         </button>
       )}
 
-      {/* Bill View Modal */}
-      {savedBill && (
-        <BillView
-          bill={savedBill}
-          shopName={shopName}
-          onClose={handleBillViewClose}
-        />
-      )}
+      {scannerOpen && <QRScanner onScan={handleQRScan} onClose={() => setScannerOpen(false)} />}
+
+      {savedBill && <BillView bill={savedBill} shopName={shopName} onClose={handleBillViewClose} />}
     </div>
   );
 };

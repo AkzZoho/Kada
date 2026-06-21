@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search, Trash2 } from 'lucide-react';
 import type { Bill } from '../types';
 import { storage } from '../storage';
 import BillView from './BillView';
@@ -12,10 +13,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 function formatDateShort(isoString: string): string {
   const date = new Date(isoString);
-  const d = date.getDate();
-  const month = MONTHS[date.getMonth()];
-  const year = date.getFullYear();
-  return `${d} ${month} ${year}`;
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
@@ -27,15 +25,9 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
     const q = search.trim().toLowerCase();
     if (!q) return bills;
     return bills.filter(
-      (b) =>
-        b.billNumber.toLowerCase().includes(q) ||
-        b.customerName.toLowerCase().includes(q)
+      (b) => b.billNumber.toLowerCase().includes(q) || b.customerName.toLowerCase().includes(q)
     );
   }, [bills, search]);
-
-  function handleCardClick(bill: Bill) {
-    setSelectedBill(bill);
-  }
 
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
@@ -46,7 +38,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
   }
 
   return (
-    <div className="screen">
+    <div>
       <div className="screen-header">
         <div className="screen-header-text">
           <h2>Bill History</h2>
@@ -54,13 +46,17 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
       </div>
 
       <div className="history-filters">
-        <input
-          type="text"
-          placeholder="Search by bill number or customer name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
+        <div className="search-bar" style={{ flex: 1 }}>
+          <Search size={16} color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder="Search by bill number or customer..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-input"
+            style={{ border: 'none', padding: '11px 0', background: 'transparent', outline: 'none', flex: 1 }}
+          />
+        </div>
       </div>
 
       <div className="stats-line">
@@ -76,17 +72,11 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
       ) : (
         <div className="bill-list">
           {filtered.map((bill) => (
-            <div
-              key={bill.id}
-              className="bill-card"
-              onClick={() => handleCardClick(bill)}
-            >
+            <div key={bill.id} className="bill-card" onClick={() => setSelectedBill(bill)}>
               <div className="bill-info">
                 <span className="bill-num">{bill.billNumber}</span>
                 <div className="bill-details">
-                  <span className="bill-customer">
-                    {bill.customerName || 'Walk-in Customer'}
-                  </span>
+                  <span className="bill-customer">{bill.customerName || 'Walk-in Customer'}</span>
                   <span className="bill-meta-text">
                     {formatDateShort(bill.date)} &middot; {bill.items.length}{' '}
                     {bill.items.length === 1 ? 'item' : 'items'}
@@ -95,15 +85,9 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
               </div>
               <div className="bill-amount">
                 <span className="bill-total">₹{bill.grandTotal.toFixed(2)}</span>
-                <span className={`pay-chip ${bill.paymentMode}`}>
-                  {bill.paymentMode.toUpperCase()}
-                </span>
-                <button
-                  className="icon-btn del"
-                  title="Delete bill"
-                  onClick={(e) => handleDelete(e, bill.id)}
-                >
-                  🗑️
+                <span className={`pay-chip ${bill.paymentMode}`}>{bill.paymentMode.toUpperCase()}</span>
+                <button className="icon-btn del" title="Delete bill" onClick={(e) => handleDelete(e, bill.id)}>
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
@@ -112,11 +96,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ bills, onDelete }) => {
       )}
 
       {selectedBill && (
-        <BillView
-          bill={selectedBill}
-          shopName={shopName}
-          onClose={() => setSelectedBill(null)}
-        />
+        <BillView bill={selectedBill} shopName={shopName} onClose={() => setSelectedBill(null)} />
       )}
     </div>
   );

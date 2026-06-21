@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Receipt, Package, ClipboardList, X } from 'lucide-react';
 import { storage } from './storage';
 import type { Product, Screen } from './types';
 import Sidebar from './components/Sidebar';
@@ -6,6 +7,12 @@ import POS from './components/POS';
 import Products from './components/Products';
 import BillHistory from './components/BillHistory';
 import './index.css';
+
+const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
+  { id: 'pos',      Icon: Receipt,      label: 'POS' },
+  { id: 'products', Icon: Package,      label: 'Products' },
+  { id: 'history',  Icon: ClipboardList, label: 'History' },
+];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('pos');
@@ -61,19 +68,15 @@ export default function App() {
         </div>
       </div>
 
-      {/* Bottom nav — mobile only (hidden on desktop via CSS) */}
+      {/* Bottom nav — mobile only */}
       <nav className="bottom-nav">
-        {([
-          { id: 'pos', icon: '🧾', label: 'POS' },
-          { id: 'products', icon: '📦', label: 'Products' },
-          { id: 'history', icon: '📋', label: 'History' },
-        ] as { id: Screen; icon: string; label: string }[]).map(({ id, icon, label }) => (
+        {BOTTOM_NAV.map(({ id, Icon, label }) => (
           <button
             key={id}
             className={`bottom-nav-btn${screen === id ? ' active' : ''}`}
             onClick={() => navigate(id)}
           >
-            <span className="bn-icon">{icon}</span>
+            <span className="bn-icon"><Icon size={22} /></span>
             {label}
           </button>
         ))}
@@ -84,7 +87,7 @@ export default function App() {
           <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Shop Name</h3>
-              <button className="modal-close" onClick={() => setEditingShop(false)}>×</button>
+              <button className="modal-close" onClick={() => setEditingShop(false)}><X size={18} /></button>
             </div>
             <div className="modal-body">
               <div className="form-field">

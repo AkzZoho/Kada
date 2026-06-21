@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Plus, Pencil, Trash2, QrCode, X, Printer } from 'lucide-react';
 import type { Product, GSTRate } from '../types';
 
 interface ProductsProps {
@@ -18,16 +19,11 @@ interface FormState {
   gstRate: string;
 }
 
-const EMPTY_FORM: FormState = {
-  name: '',
-  category: '',
-  price: '',
-  unit: 'piece',
-  gstRate: '0',
-};
+const EMPTY_FORM: FormState = { name: '', category: '', price: '', unit: 'piece', gstRate: '0' };
 
+// QR format: "KADA:{id}" — scanned by POS scanner to look up the product
 function qrData(p: Product): string {
-  return `${p.name}\n₹${p.price.toFixed(2)} / ${p.unit}\nGST: ${p.gstRate}%${p.category ? `\n${p.category}` : ''}`;
+  return `KADA:${p.id}\n${p.name}\n₹${p.price.toFixed(2)}/${p.unit}`;
 }
 
 const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
@@ -46,13 +42,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
 
   function openEdit(product: Product) {
     setEditingProduct(product);
-    setForm({
-      name: product.name,
-      category: product.category,
-      price: String(product.price),
-      unit: product.unit,
-      gstRate: String(product.gstRate),
-    });
+    setForm({ name: product.name, category: product.category, price: String(product.price), unit: product.unit, gstRate: String(product.gstRate) });
     setError('');
     setModalOpen(true);
   }
@@ -76,11 +66,8 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
 
     const productData: Product = {
       id: editingProduct ? editingProduct.id : crypto.randomUUID(),
-      name,
-      category: form.category.trim(),
-      price,
-      unit: form.unit,
-      gstRate: parseInt(form.gstRate, 10) as GSTRate,
+      name, category: form.category.trim(), price,
+      unit: form.unit, gstRate: parseInt(form.gstRate, 10) as GSTRate,
     };
 
     if (editingProduct) {
@@ -104,7 +91,9 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
           <h2>Products</h2>
           <p>{products.length} item{products.length !== 1 ? 's' : ''} in catalog</p>
         </div>
-        <button className="btn btn-gold" onClick={openAdd}>+ Add Product</button>
+        <button className="btn btn-gold" onClick={openAdd}>
+          <Plus size={16} style={{ marginRight: 4 }} /> Add Product
+        </button>
       </div>
 
       <div className="table-card">
@@ -128,9 +117,9 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 <div className="pli-right">
                   <div className="pli-price">₹{product.price.toFixed(2)}</div>
                   <div className="pli-actions">
-                    <button className="icon-btn" title="QR Label" onClick={() => setQrProduct(product)}>QR</button>
-                    <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}>✏️</button>
-                    <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}>🗑️</button>
+                    <button className="icon-btn" title="QR Label" onClick={() => setQrProduct(product)}><QrCode size={14} /></button>
+                    <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}><Pencil size={14} /></button>
+                    <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>
@@ -145,7 +134,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
+              <button className="modal-close" onClick={closeModal}><X size={18} /></button>
             </div>
             <div className="modal-body">
               {error && (
@@ -156,34 +145,16 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
               <div className="form-grid">
                 <div className="form-field">
                   <label>Product Name *</label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => handleField('name', e.target.value)}
-                    placeholder="e.g. Silk Saree"
-                    autoFocus
-                  />
+                  <input type="text" value={form.name} onChange={(e) => handleField('name', e.target.value)} placeholder="e.g. Silk Saree" autoFocus />
                 </div>
                 <div className="form-row">
                   <div className="form-field">
                     <label>Category</label>
-                    <input
-                      type="text"
-                      value={form.category}
-                      onChange={(e) => handleField('category', e.target.value)}
-                      placeholder="e.g. Clothing"
-                    />
+                    <input type="text" value={form.category} onChange={(e) => handleField('category', e.target.value)} placeholder="e.g. Clothing" />
                   </div>
                   <div className="form-field">
                     <label>Price (₹) *</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={form.price}
-                      onChange={(e) => handleField('price', e.target.value)}
-                      placeholder="0.00"
-                    />
+                    <input type="number" min="0" step="0.01" value={form.price} onChange={(e) => handleField('price', e.target.value)} placeholder="0.00" />
                   </div>
                 </div>
                 <div className="form-row">
@@ -204,9 +175,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={closeModal}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                {editingProduct ? 'Update' : 'Add Product'}
-              </button>
+              <button className="btn btn-primary" onClick={handleSave}>{editingProduct ? 'Update' : 'Add Product'}</button>
             </div>
           </div>
         </div>
@@ -217,27 +186,25 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
         <div className="modal-overlay" onClick={() => setQrProduct(null)}>
           <div className="modal qr-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header no-print">
-              <h3>QR Label — {qrProduct.name}</h3>
-              <button className="modal-close" onClick={() => setQrProduct(null)}>×</button>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><QrCode size={17} /> QR Label</h3>
+              <button className="modal-close" onClick={() => setQrProduct(null)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ display: 'flex', justifyContent: 'center', padding: '28px 20px 20px' }}>
               <div className="qr-label">
-                {qrProduct.category && (
-                  <div className="qr-label-cat">{qrProduct.category}</div>
-                )}
+                {qrProduct.category && <div className="qr-label-cat">{qrProduct.category}</div>}
                 <div className="qr-label-name">{qrProduct.name}</div>
                 <div className="qr-label-price">₹{qrProduct.price.toFixed(2)}</div>
                 <div className="qr-label-sub">per {qrProduct.unit} · GST {qrProduct.gstRate}%</div>
                 <div className="qr-label-code">
                   <QRCodeSVG value={qrData(qrProduct)} size={160} level="M" />
                 </div>
-                <div className="qr-label-hint">Scan for product info</div>
+                <div className="qr-label-hint">Scan with Kada POS to add to cart</div>
               </div>
             </div>
             <div className="modal-footer no-print">
               <button className="btn btn-ghost" onClick={() => setQrProduct(null)}>Close</button>
               <button className="btn btn-primary" onClick={() => window.print()}>
-                🖨️ Print Label
+                <Printer size={15} style={{ marginRight: 5 }} /> Print Label
               </button>
             </div>
           </div>

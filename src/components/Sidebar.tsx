@@ -1,4 +1,5 @@
 import React from 'react';
+import { Receipt, Package, ClipboardList, Pencil } from 'lucide-react';
 import type { Screen } from '../types';
 
 interface SidebarProps {
@@ -12,44 +13,41 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatDate(date: Date): string {
-  const day = DAYS[date.getDay()];
-  const d = date.getDate();
-  const month = MONTHS[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day}, ${d} ${month} ${year}`;
+  return `${DAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-const NAV_ITEMS: { screen: Screen; icon: string; label: string }[] = [
-  { screen: 'pos', icon: '🧾', label: 'POS' },
-  { screen: 'products', icon: '📦', label: 'Products' },
-  { screen: 'history', icon: '📋', label: 'History' },
+const NAV_ITEMS: { screen: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
+  { screen: 'pos',      Icon: Receipt,       label: 'POS' },
+  { screen: 'products', Icon: Package,        label: 'Products' },
+  { screen: 'history',  Icon: ClipboardList,  label: 'History' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopName, onEditShopName }) => {
-  const today = formatDate(new Date());
-
   return (
     <aside className="sidebar">
       <div className="sidebar-brand" onClick={onEditShopName} style={{ cursor: 'pointer' }} title="Click to edit shop name">
-        <h2>{shopName}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2>{shopName}</h2>
+          <Pencil size={13} color="rgba(212,168,32,0.6)" />
+        </div>
         <p>Billing Software</p>
       </div>
 
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map(({ screen: s, Icon, label }) => (
           <button
-            key={item.screen}
-            className={`nav-btn${screen === item.screen ? ' active' : ''}`}
-            onClick={() => onNav(item.screen)}
+            key={s}
+            className={`nav-btn${screen === s ? ' active' : ''}`}
+            onClick={() => onNav(s)}
           >
-            <span className="icon">{item.icon}</span>
-            {item.label}
+            <span className="icon"><Icon size={18} /></span>
+            {label}
           </button>
         ))}
       </nav>
 
       <div className="sidebar-footer">
-        <span className="date-str">{today}</span>
+        <span className="date-str">{formatDate(new Date())}</span>
       </div>
     </aside>
   );
