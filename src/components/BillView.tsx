@@ -87,9 +87,8 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal bill-view" onClick={e => e.stopPropagation()}>
 
-        {/* Screen-only header */}
-        <div className="modal-header no-print">
-          <h3>Invoice #{bill.billNumber}</h3>
+        {/* Close button only — invoice header has all details */}
+        <div className="inv-close-bar no-print">
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
 
@@ -114,7 +113,7 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
             <div className="inv-meta-grid">
               <div>
                 <div className="inv-meta-key">Invoice No</div>
-                <div className="inv-meta-val">{bill.billNumber}</div>
+                <div className="inv-meta-val inv-mono">{bill.billNumber}</div>
               </div>
               <div>
                 <div className="inv-meta-key">Date &amp; Time</div>
@@ -142,31 +141,21 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
 
             <div className="inv-divider" />
 
-            {/* Items Table */}
-            <table className="inv-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th className="right">Qty</th>
-                  <th className="right">Rate</th>
-                  <th className="right">Taxable</th>
-                  <th className="right">GST%</th>
-                  <th className="right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bill.items.map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.name}</td>
-                    <td className="right">{item.quantity} {item.unit}</td>
-                    <td className="right">{fmt(item.price)}</td>
-                    <td className="right">{fmt(item.taxableAmount)}</td>
-                    <td className="right">{item.gstRate}%</td>
-                    <td className="right bold">{fmt(item.lineTotal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* Items List */}
+            <div className="inv-items">
+              {bill.items.map((item, i) => (
+                <div key={i} className="inv-item">
+                  <div className="inv-item-top">
+                    <span className="inv-item-name">{item.name}</span>
+                    <span className="inv-item-total">{fmt(item.lineTotal)}</span>
+                  </div>
+                  <div className="inv-item-sub">
+                    {item.quantity} {item.unit} × {fmt(item.price)}
+                    {item.gstRate > 0 && ` · Taxable ${fmt(item.taxableAmount)} · GST ${item.gstRate}%`}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div className="inv-divider" />
 
