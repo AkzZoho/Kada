@@ -1,33 +1,41 @@
 import { useState, useEffect } from 'react';
-import { Receipt, Package, ClipboardList, X } from 'lucide-react';
+import { Receipt, Package, ClipboardList, Settings2, X } from 'lucide-react';
 import { storage } from './storage';
 import type { Product, Screen, ShopInfo } from './types';
 import Sidebar from './components/Sidebar';
 import POS from './components/POS';
 import Products from './components/Products';
 import BillHistory from './components/BillHistory';
+import Settings from './components/Settings';
 import './index.css';
 
 const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
-  { id: 'pos',      Icon: Receipt,       label: 'POS' },
-  { id: 'products', Icon: Package,       label: 'Products' },
+  { id: 'pos',      Icon: Receipt,    label: 'POS' },
+  { id: 'products', Icon: Package,    label: 'Products' },
   { id: 'history',  Icon: ClipboardList, label: 'History' },
+  { id: 'settings', Icon: Settings2,  label: 'Settings' },
 ];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>(() => {
     const saved = localStorage.getItem('pos_screen');
-    return (saved === 'products' || saved === 'history') ? saved : 'pos';
+    return (['products', 'history', 'settings'].includes(saved ?? ''))
+      ? saved as Screen : 'pos';
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [shopInfo, setShopInfo] = useState<ShopInfo>(() => storage.getShopInfo());
-  const [editingShop, setEditingShop] = useState(false);
-  const [shopForm, setShopForm] = useState<ShopInfo>(shopInfo);
+  const [operatorPrompt, setOperatorPrompt] = useState(false);
+  const [operatorInput, setOperatorInput] = useState('');
 
   useEffect(() => {
     storage.seedIfEmpty();
     setProducts(storage.getProducts());
-    setShopInfo(storage.getShopInfo());
+    const info = storage.getShopInfo();
+    setShopInfo(info);
+    // First-time operator name setup
+    if (!info.operatorName) {
+      setOperatorPrompt(true);
+    }
   }, []);
 
   function handleProductsUpdate(updated: Product[]) {
@@ -35,21 +43,17 @@ export default function App() {
     setProducts(updated);
   }
 
-  function openShopSettings() {
-    setShopForm(shopInfo);
-    setEditingShop(true);
+  function handleShopInfoSave(info: ShopInfo) {
+    setShopInfo(info);
   }
 
-  function handleShopSave() {
-    const info: ShopInfo = {
-      name: shopForm.name.trim() || 'My Shop',
-      address: shopForm.address.trim(),
-      gstin: shopForm.gstin.trim().toUpperCase(),
-      phone: shopForm.phone.trim(),
-    };
+  function saveOperator() {
+    const name = operatorInput.trim();
+    if (!name) return;
+    const info: ShopInfo = { ...shopInfo, operatorName: name };
     storage.setShopInfo(info);
     setShopInfo(info);
-    setEditingShop(false);
+    setOperatorPrompt(false);
   }
 
   function navigate(to: Screen) {
@@ -60,13 +64,21 @@ export default function App() {
 
   return (
     <>
-      <Sidebar screen={screen} onNav={navigate} shopName={shopInfo.name} onEditShopName={openShopSettings} />
+      <Sidebar
+        screen={screen}
+        onNav={navigate}
+        shopInfo={shopInfo}
+        onEditSettings={() => navigate('settings')}
+      />
       <div className="main">
         <div className="screen">
           {screen === 'pos' && <POS products={products} onBillSaved={() => {}} />}
           {screen === 'products' && <Products products={products} onUpdate={handleProductsUpdate} />}
           {screen === 'history' && (
             <BillHistory bills={storage.getBills()} onDelete={(id) => { storage.deleteBill(id); }} />
+          )}
+          {screen === 'settings' && (
+            <Settings shopInfo={shopInfo} onSave={handleShopInfoSave} />
           )}
         </div>
       </div>
@@ -80,61 +92,35 @@ export default function App() {
         ))}
       </nav>
 
-      {editingShop && (
-        <div className="modal-overlay" onClick={() => setEditingShop(false)}>
-          <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+      {/* First-time operator name prompt */}
+      {operatorPrompt && (
+        <div className="modal-overlay" onClick={() => {}}>
+          <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Shop Settings</h3>
-              <button className="modal-close" onClick={() => setEditingShop(false)}><X size={18} /></button>
+              <h3>Who's on the counter?</h3>
+              <button className="modal-close" onClick={() => setOperatorPrompt(false)}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-field">
-                  <label>Shop Name *</label>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={shopForm.name}
-                    onChange={e => setShopForm(f => ({ ...f, name: e.target.value }))}
-                    onKeyDown={e => e.key === 'Enter' && handleShopSave()}
-                    placeholder="e.g. Anandha Stores"
-                  />
-                </div>
-                <div className="form-field">
-                  <label>Address</label>
-                  <input
-                    type="text"
-                    value={shopForm.address}
-                    onChange={e => setShopForm(f => ({ ...f, address: e.target.value }))}
-                    placeholder="e.g. Main Road, Thrissur, Kerala"
-                  />
-                </div>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>GSTIN</label>
-                    <input
-                      type="text"
-                      value={shopForm.gstin}
-                      onChange={e => setShopForm(f => ({ ...f, gstin: e.target.value }))}
-                      placeholder="e.g. 32ABCDE1234F1Z5"
-                      maxLength={15}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Phone</label>
-                    <input
-                      type="tel"
-                      value={shopForm.phone}
-                      onChange={e => setShopForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="e.g. 9876543210"
-                    />
-                  </div>
-                </div>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+                Enter your name. This is saved and you won't be asked again.
+              </p>
+              <div className="form-field">
+                <label>Your Name</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={operatorInput}
+                  onChange={e => setOperatorInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && saveOperator()}
+                  placeholder="e.g. Rajan"
+                />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setEditingShop(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleShopSave}>Save</button>
+              <button className="btn btn-ghost" onClick={() => setOperatorPrompt(false)}>Skip</button>
+              <button className="btn btn-primary" onClick={saveOperator} disabled={!operatorInput.trim()}>
+                Save &amp; Continue
+              </button>
             </div>
           </div>
         </div>

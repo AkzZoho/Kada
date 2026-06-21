@@ -88,6 +88,7 @@ const DEFAULT_SHOP_INFO: ShopInfo = {
   address: 'Thrissur, Kerala',
   gstin: '',
   phone: '',
+  operatorName: '',
 };
 
 export const storage = {

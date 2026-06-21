@@ -5,9 +5,10 @@ export interface ShopInfo {
   address: string;
   gstin: string;
   phone: string;
+  operatorName: string;
 }
 export type PaymentMode = 'cash' | 'card' | 'upi';
-export type Screen = 'pos' | 'products' | 'history';
+export type Screen = 'pos' | 'products' | 'history' | 'settings';
 
 export interface Product {
   id: string;

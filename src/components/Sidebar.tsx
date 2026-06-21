@@ -1,12 +1,12 @@
 import React from 'react';
-import { Receipt, Package, ClipboardList, Pencil } from 'lucide-react';
-import type { Screen } from '../types';
+import { Receipt, Package, ClipboardList, Settings2, User } from 'lucide-react';
+import type { Screen, ShopInfo } from '../types';
 
 interface SidebarProps {
   screen: Screen;
   onNav: (s: Screen) => void;
-  shopName: string;
-  onEditShopName: () => void;
+  shopInfo: ShopInfo;
+  onEditSettings: () => void;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -22,14 +22,11 @@ const NAV_ITEMS: { screen: Screen; Icon: React.FC<{ size: number }>; label: stri
   { screen: 'history',  Icon: ClipboardList,  label: 'History' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopName, onEditShopName }) => {
+const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings }) => {
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand" onClick={onEditShopName} style={{ cursor: 'pointer' }} title="Click to edit shop name">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2>{shopName}</h2>
-          <Pencil size={13} color="rgba(212,168,32,0.6)" />
-        </div>
+      <div className="sidebar-brand">
+        <h2>{shopInfo.name}</h2>
         <p>Billing Software</p>
       </div>
 
@@ -47,7 +44,17 @@ const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopName, onEditShopNa
       </nav>
 
       <div className="sidebar-footer">
+        {shopInfo.operatorName && (
+          <div className="sidebar-operator">
+            <User size={12} />
+            <span>{shopInfo.operatorName}</span>
+          </div>
+        )}
         <span className="date-str">{formatDate(new Date())}</span>
+        <button className="sidebar-settings-btn" onClick={onEditSettings}>
+          <Settings2 size={14} />
+          Settings
+        </button>
       </div>
     </aside>
   );
