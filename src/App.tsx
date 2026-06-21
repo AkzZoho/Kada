@@ -30,11 +30,16 @@ export default function App() {
     setEditingShop(false);
   }
 
+  function navigate(to: Screen) {
+    setScreen(to);
+    window.scrollTo(0, 0);
+  }
+
   return (
     <>
       <Sidebar
         screen={screen}
-        onNav={setScreen}
+        onNav={navigate}
         shopName={shopName}
         onEditShopName={() => { setShopInput(shopName); setEditingShop(true); }}
       />
@@ -64,7 +69,7 @@ export default function App() {
           <button
             key={id}
             className={`bottom-nav-btn${screen === id ? ' active' : ''}`}
-            onClick={() => setScreen(id)}
+            onClick={() => navigate(id)}
           >
             <span className="bn-icon">{icon}</span>
             {label}
