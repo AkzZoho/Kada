@@ -15,7 +15,10 @@ const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string 
 ];
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('pos');
+  const [screen, setScreen] = useState<Screen>(() => {
+    const saved = localStorage.getItem('pos_screen');
+    return (saved === 'products' || saved === 'history') ? saved : 'pos';
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [shopName, setShopName] = useState(storage.getShopName());
   const [editingShop, setEditingShop] = useState(false);
@@ -41,6 +44,7 @@ export default function App() {
 
   function navigate(to: Screen) {
     setScreen(to);
+    localStorage.setItem('pos_screen', to);
     window.scrollTo(0, 0);
   }
 
