@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
-import { Store, Users, Save, Plus, Trash2 } from 'lucide-react';
+import { Store, Users, Save, Plus, Trash2, Upload, X } from 'lucide-react';
 import type { ShopInfo } from '../types';
 
 interface SettingsProps {
   shopInfo: ShopInfo;
   operators: string[];
   onSave: (info: ShopInfo, operators: string[]) => void;
+}
+
+function compressImage(file: File, maxSize = 240): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators, onSave }) => {
@@ -19,6 +38,14 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
       setForm(f => ({ ...f, [field]: e.target.value }));
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file);
+    setForm(f => ({ ...f, logo: compressed }));
+    e.target.value = '';
+  }
+
   function addOperator() {
     const name = newOp.trim();
     if (!name || operators.includes(name)) return;
@@ -28,10 +55,7 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
 
   function removeOperator(name: string) {
     setOperators(prev => prev.filter(o => o !== name));
-    // if removing the active operator, clear it
-    if (form.operatorName === name) {
-      setForm(f => ({ ...f, operatorName: '' }));
-    }
+    if (form.operatorName === name) setForm(f => ({ ...f, operatorName: '' }));
   }
 
   function handleSave() {
@@ -41,6 +65,7 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
       gstin: form.gstin.trim().toUpperCase(),
       phone: form.phone.trim(),
       operatorName: form.operatorName,
+      logo: form.logo,
     };
     onSave(info, operators);
     setSaved(true);
@@ -61,44 +86,47 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
           <Store size={15} />
           Shop Details
         </div>
+
+        {/* Logo upload */}
+        <div className="logo-upload-row">
+          <div className="logo-upload-preview">
+            {form.logo
+              ? <img src={form.logo} alt="Shop logo" />
+              : <span>{form.name ? form.name[0].toUpperCase() : 'S'}</span>
+            }
+          </div>
+          <div className="logo-upload-actions">
+            <label className="btn btn-ghost logo-upload-btn">
+              <Upload size={14} />
+              {form.logo ? 'Change Logo' : 'Upload Logo'}
+              <input type="file" accept="image/*" onChange={handleLogoUpload} hidden />
+            </label>
+            {form.logo && (
+              <button className="btn btn-ghost logo-remove-btn" onClick={() => setForm(f => ({ ...f, logo: '' }))}>
+                <X size={14} /> Remove
+              </button>
+            )}
+            <p className="settings-hint">Optional · PNG or JPG · shown on invoices</p>
+          </div>
+        </div>
+
         <div className="form-grid">
           <div className="form-field">
             <label>Shop Name *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={set('name')}
-              placeholder="e.g. Anandha Stores"
-            />
+            <input type="text" value={form.name} onChange={set('name')} placeholder="e.g. Anandha Stores" />
           </div>
           <div className="form-field">
             <label>Address</label>
-            <input
-              type="text"
-              value={form.address}
-              onChange={set('address')}
-              placeholder="e.g. Main Road, Thrissur, Kerala"
-            />
+            <input type="text" value={form.address} onChange={set('address')} placeholder="e.g. Main Road, Thrissur, Kerala" />
           </div>
           <div className="form-row">
             <div className="form-field">
               <label>GSTIN</label>
-              <input
-                type="text"
-                value={form.gstin}
-                onChange={set('gstin')}
-                placeholder="e.g. 32ABCDE1234F1Z5"
-                maxLength={15}
-              />
+              <input type="text" value={form.gstin} onChange={set('gstin')} placeholder="e.g. 32ABCDE1234F1Z5" maxLength={15} />
             </div>
             <div className="form-field">
               <label>Phone</label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={set('phone')}
-                placeholder="e.g. 9876543210"
-              />
+              <input type="tel" value={form.phone} onChange={set('phone')} placeholder="e.g. 9876543210" />
             </div>
           </div>
         </div>
@@ -111,41 +139,24 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
           Employees / Operators
         </div>
 
-        {/* Active operator dropdown */}
         <div className="form-field" style={{ marginBottom: 16 }}>
           <label>Currently on Counter</label>
-          <select
-            value={form.operatorName}
-            onChange={set('operatorName')}
-            disabled={operators.length === 0}
-          >
+          <select value={form.operatorName} onChange={set('operatorName')} disabled={operators.length === 0}>
             <option value="">— Select operator —</option>
-            {operators.map(op => (
-              <option key={op} value={op}>{op}</option>
-            ))}
+            {operators.map(op => <option key={op} value={op}>{op}</option>)}
           </select>
-          {operators.length === 0 && (
-            <p className="settings-hint">Add employees below to enable this dropdown.</p>
-          )}
+          {operators.length === 0 && <p className="settings-hint">Add employees below to enable this dropdown.</p>}
         </div>
 
-        {/* Employee list */}
         <div className="op-list">
           {operators.map(op => (
             <div key={op} className="op-item">
               <span className="op-name">{op}</span>
-              <button
-                className="icon-btn del"
-                onClick={() => removeOperator(op)}
-                title="Remove"
-              >
-                <Trash2 size={13} />
-              </button>
+              <button className="icon-btn del" onClick={() => removeOperator(op)} title="Remove"><Trash2 size={13} /></button>
             </div>
           ))}
         </div>
 
-        {/* Add new employee */}
         <div className="op-add-row">
           <input
             type="text"
@@ -155,13 +166,8 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
             onChange={e => setNewOp(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addOperator()}
           />
-          <button
-            className="btn btn-ghost op-add-btn"
-            onClick={addOperator}
-            disabled={!newOp.trim()}
-          >
-            <Plus size={15} />
-            Add
+          <button className="btn btn-ghost op-add-btn" onClick={addOperator} disabled={!newOp.trim()}>
+            <Plus size={15} /> Add
           </button>
         </div>
       </div>

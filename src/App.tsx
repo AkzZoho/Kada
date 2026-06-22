@@ -14,7 +14,7 @@ import './index.css';
 
 // ── Shop context ──────────────────────────────────────────────
 export const ShopContext = createContext<ShopInfo>({
-  name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '',
+  name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '', logo: '',
 });
 export const useShop = () => useContext(ShopContext);
 
@@ -25,7 +25,7 @@ const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string 
   { id: 'settings', Icon: Settings2,     label: 'Settings' },
 ];
 
-const DEFAULT_SHOP: ShopInfo = { name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '' };
+const DEFAULT_SHOP: ShopInfo = { name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '', logo: '' };
 
 export default function App() {
   const [authLoading, setAuthLoading] = useState(true);

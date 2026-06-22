@@ -6,6 +6,7 @@ export interface ShopInfo {
   gstin: string;
   phone: string;
   operatorName: string;
+  logo: string;
 }
 export type PaymentMode = 'cash' | 'card' | 'upi';
 export type Screen = 'pos' | 'products' | 'history' | 'settings';

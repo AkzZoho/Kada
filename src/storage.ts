@@ -90,6 +90,7 @@ const DEFAULT_SHOP_INFO: ShopInfo = {
   gstin: '',
   phone: '',
   operatorName: '',
+  logo: '',
 };
 
 export const storage = {

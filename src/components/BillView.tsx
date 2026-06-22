@@ -113,7 +113,12 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
 
             {/* Shop Header */}
             <div className="inv-shop-header">
-              <div className="inv-logo">{getInitials(shop.name)}</div>
+              <div className="inv-logo">
+                {shop.logo
+                  ? <img src={shop.logo} alt={shop.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+                  : getInitials(shop.name)
+                }
+              </div>
               <div className="inv-shop-info">
                 <div className="inv-shop-name">{shop.name}</div>
                 {shop.address && <div className="inv-shop-detail">{shop.address}</div>}

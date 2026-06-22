@@ -20,13 +20,14 @@ export async function getShop(userId: string): Promise<{ id: string; info: ShopI
       gstin: r.gstin ?? '',
       phone: r.phone ?? '',
       operatorName: r.operatorName ?? '',
+      logo: r.logo ?? '',
     },
   };
 }
 
 export async function createShop(userId: string): Promise<{ id: string; info: ShopInfo }> {
   const ref = doc(collection(db, 'shops'));
-  const info: ShopInfo = { name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '' };
+  const info: ShopInfo = { name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '', logo: '' };
   await setDoc(ref, { userId, ...info, billCounter: 0 });
   return { id: ref.id, info };
 }
@@ -37,6 +38,7 @@ export async function updateShop(shopId: string, info: ShopInfo) {
     address: info.address,
     gstin: info.gstin,
     phone: info.phone,
+    logo: info.logo,
   });
 }
 
