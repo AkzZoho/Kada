@@ -41,7 +41,6 @@ export default function App() {
     return (['products', 'history', 'settings'].includes(s ?? '')) ? s as Screen : 'pos';
   });
   const [operatorPrompt, setOperatorPrompt] = useState(false);
-  const [selectedOp, setSelectedOp] = useState('');
 
   // ── Auth ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -141,13 +140,7 @@ export default function App() {
     setShopInfo(prev => ({ ...prev, operatorName: name }));
   }
 
-  function confirmOperator() {
-    if (!selectedOp) return;
-    handleOperatorChange(selectedOp);
-    setOperatorPrompt(false);
-  }
-
-  function navigate(to: Screen) {
+function navigate(to: Screen) {
     setScreen(to);
     localStorage.setItem('pos_screen', to);
     window.scrollTo(0, 0);
@@ -223,23 +216,24 @@ export default function App() {
 
       {operatorPrompt && (
         <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
+          <div className="modal op-pick-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Who's on the counter?</h3>
               <button className="modal-close" onClick={() => setOperatorPrompt(false)}><X size={18} /></button>
             </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Select Operator</label>
-                <select value={selectedOp} onChange={e => setSelectedOp(e.target.value)} autoFocus>
-                  <option value="">— Choose —</option>
-                  {operators.map(op => <option key={op} value={op}>{op}</option>)}
-                </select>
-              </div>
+            <div className="op-pick-list">
+              {operators.map(op => (
+                <button
+                  key={op}
+                  className="op-pick-item"
+                  onClick={() => { handleOperatorChange(op); setOperatorPrompt(false); }}
+                >
+                  {op}
+                </button>
+              ))}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setOperatorPrompt(false)}>Skip</button>
-              <button className="btn btn-primary" onClick={confirmOperator} disabled={!selectedOp}>Start Shift</button>
+              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setOperatorPrompt(false)}>Skip for now</button>
             </div>
           </div>
         </div>
