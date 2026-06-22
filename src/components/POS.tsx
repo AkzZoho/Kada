@@ -266,7 +266,10 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
                     {product.category ? <span className="prod-cat">{product.category}</span> : <span />}
                     {cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
                   </div>
-                  <div className="prod-name">{product.name}</div>
+                  <div className="prod-name">
+                    {product.sku && <span className="pc-sku">{product.sku}</span>}
+                    {product.name}
+                  </div>
                   {product.stock !== undefined && (
                     <div className={`pc-stock${product.stock === 0 ? ' pc-stock-out' : product.stock <= 5 ? ' pc-stock-low' : ' pc-stock-ok'}`}>
                       {product.stock === 0 ? 'Out of stock' : `${product.stock} left`}

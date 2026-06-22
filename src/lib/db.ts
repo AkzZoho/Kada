@@ -63,9 +63,15 @@ export async function getProducts(shopId: string): Promise<Product[]> {
 export async function saveProducts(shopId: string, products: Product[]) {
   const batch = writeBatch(db);
   const existing = await getDocs(collection(db, 'shops', shopId, 'products'));
-  existing.docs.forEach(d => batch.delete(d.ref));
-  products.forEach(({ id, ...rest }) => {
-    batch.set(doc(db, 'shops', shopId, 'products', id), rest);
+  const incomingIds = new Set(products.map(p => p.id));
+  // Only delete products that were removed
+  existing.docs.forEach(d => { if (!incomingIds.has(d.id)) batch.delete(d.ref); });
+  // Upsert each product — explicitly exclude undefined fields so Firestore accepts the write
+  products.forEach((product) => {
+    const { id, stock, ...rest } = product;
+    const data: Record<string, unknown> = { ...rest };
+    if (stock !== undefined) data.stock = stock;
+    batch.set(doc(db, 'shops', shopId, 'products', id), data);
   });
   await batch.commit();
 }
