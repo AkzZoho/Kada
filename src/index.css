@@ -1016,6 +1016,27 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   font-weight: 500;
 }
 
+/* Product ID under name */
+.pli-id {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.2px;
+  word-break: break-all;
+  user-select: all;
+}
+
+/* QR modal product ID */
+.qr-label-id {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9px;
+  color: var(--border);
+  word-break: break-all;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
 .pli-right {
   display: flex;
   flex-direction: column;
@@ -2549,7 +2570,65 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   .pr-items-col-header { display: none; }
   .pr-item-row { flex-wrap: wrap; }
   .pr-item-input { min-width: calc(50% - 3px); }
+  .pr-combobox { min-width: 100%; }
 
   .purchase-form-card { padding: 14px; }
   .pr-card-actions { gap: 6px; }
+}
+
+/* ── Product combobox (purchase form lookup) ── */
+.pr-combobox { position: relative; }
+.pr-combobox-wrap { position: relative; }
+.pr-combobox-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color var(--transition);
+}
+.pr-combobox-clear:hover { color: var(--danger); }
+.pr-combobox-menu {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0; right: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pr-combobox-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 8px;
+  transition: background 0.1s;
+}
+.pr-combobox-option:hover { background: var(--bg); }
+.pr-combobox-option + .pr-combobox-option { border-top: 1px solid var(--border); }
+.pr-combobox-name { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-combobox-meta { font-size: 11px; color: var(--text-muted); white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+.pr-combobox-cat {
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 500;
 }

@@ -228,6 +228,7 @@ function navigate(to: Screen) {
           {screen === 'purchase' && (
             <PurchaseScreen
               purchases={purchases}
+              products={products}
               nextPurchaseNumber={handleNextPurchaseNumber}
               onSave={handlePurchaseSave}
               onDelete={handlePurchaseDelete}

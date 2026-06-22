@@ -108,6 +108,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
               <div key={product.id} className="pli">
                 <div className="pli-main">
                   <div className="pli-name">{product.name}</div>
+                  <div className="pli-id">ID: {product.id}</div>
                   <div className="pli-tags">
                     {product.category && <span className="cat-badge">{product.category}</span>}
                     <span className="gst-badge">{product.gstRate}%</span>
@@ -198,6 +199,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 <div className="qr-label-code">
                   <QRCodeSVG value={qrData(qrProduct)} size={160} level="M" />
                 </div>
+                <div className="qr-label-id">{qrProduct.id}</div>
                 <div className="qr-label-hint">Scan with Kada POS to add to cart</div>
               </div>
             </div>

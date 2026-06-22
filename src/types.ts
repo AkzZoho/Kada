@@ -12,6 +12,7 @@ export type PaymentMode = 'cash' | 'card' | 'upi';
 export type Screen = 'pos' | 'products' | 'purchase' | 'history' | 'reports' | 'settings';
 
 export interface PurchaseItem {
+  productId?: string;
   name: string;
   quantity: number;
   unit: string;

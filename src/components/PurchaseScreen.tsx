@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { Plus, QrCode, Printer, Trash2, CheckCircle, Clock, X, ArrowLeft, Package, ChevronDown } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import type { Purchase, PurchaseItem } from '../types';
+import type { Product, Purchase, PurchaseItem } from '../types';
 import { useShop } from '../App';
 
 interface PurchaseScreenProps {
   purchases: Purchase[];
+  products: Product[];
   nextPurchaseNumber: () => Promise<string>;
   onSave: (purchase: Purchase) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -13,6 +14,7 @@ interface PurchaseScreenProps {
 }
 
 interface FormItem {
+  productId?: string;
   name: string;
   quantity: string;
   unit: string;
@@ -20,17 +22,8 @@ interface FormItem {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function fmtDelivery(dateStr: string) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
+function fmtDate(iso: string) { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtDelivery(s: string) { if (!s) return ''; const d = new Date(s); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
 
 function buildQR(p: Purchase): string {
   return [
@@ -43,10 +36,74 @@ function buildQR(p: Purchase): string {
   ].filter(Boolean).join('\n');
 }
 
+// ── Product lookup combobox ──────────────────────────────────
+interface ComboboxProps {
+  products: Product[];
+  value: string;
+  selectedId?: string;
+  onSelect: (product: Product) => void;
+  onManualChange: (name: string) => void;
+  onClear: () => void;
+}
+
+const ProductCombobox: React.FC<ComboboxProps> = ({ products, value, selectedId, onSelect, onManualChange, onClear }) => {
+  const [open, setOpen] = useState(false);
+
+  const filtered = React.useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return products.slice(0, 8);
+    return products.filter(
+      p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [products, value]);
+
+  return (
+    <div className="pr-combobox" style={{ flex: 3 }}>
+      <div className="pr-combobox-wrap">
+        <input
+          className="pr-item-input"
+          style={{ width: '100%', paddingRight: selectedId ? 28 : undefined }}
+          type="text"
+          value={value}
+          placeholder="Search product or type name…"
+          onChange={e => { onManualChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        />
+        {selectedId && (
+          <button className="pr-combobox-clear" onClick={onClear} title="Clear selection" type="button">
+            <X size={12} />
+          </button>
+        )}
+      </div>
+      {open && filtered.length > 0 && !selectedId && (
+        <div className="pr-combobox-menu">
+          {filtered.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className="pr-combobox-option"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onSelect(p); setOpen(false); }}
+            >
+              <span className="pr-combobox-name">{p.name}</span>
+              <span className="pr-combobox-meta">
+                {p.category && <span className="pr-combobox-cat">{p.category}</span>}
+                ₹{p.price.toFixed(2)} / {p.unit}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Main Screen ──────────────────────────────────────────────
 const EMPTY_ITEM: FormItem = { name: '', quantity: '1', unit: 'pcs', pricePerUnit: '' };
 
 const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
-  purchases, nextPurchaseNumber, onSave, onDelete, onStatusUpdate,
+  purchases, products, nextPurchaseNumber, onSave, onDelete, onStatusUpdate,
 }) => {
   const shop = useShop();
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -67,8 +124,26 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
     setView('form');
   }
 
-  function updateItem(idx: number, field: keyof FormItem, value: string) {
-    setFormItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  function selectProduct(idx: number, product: Product) {
+    setFormItems(prev => prev.map((item, i) => i !== idx ? item : {
+      productId: product.id,
+      name: product.name,
+      quantity: item.quantity || '1',
+      unit: product.unit,
+      pricePerUnit: item.pricePerUnit || String(product.price),
+    }));
+  }
+
+  function clearProductSelection(idx: number) {
+    setFormItems(prev => prev.map((item, i) => i !== idx ? item : { ...item, productId: undefined, name: '', unit: 'pcs' }));
+  }
+
+  function updateItemName(idx: number, name: string) {
+    setFormItems(prev => prev.map((item, i) => i !== idx ? item : { ...item, productId: undefined, name }));
+  }
+
+  function updateItemField(idx: number, field: 'quantity' | 'unit' | 'pricePerUnit', value: string) {
+    setFormItems(prev => prev.map((item, i) => i !== idx ? item : { ...item, [field]: value }));
   }
 
   function addItem() { setFormItems(prev => [...prev, { ...EMPTY_ITEM }]); }
@@ -82,6 +157,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
     try {
       const prNumber = await nextPurchaseNumber();
       const purchaseItems: PurchaseItem[] = validItems.map(i => ({
+        productId: i.productId,
         name: i.name.trim(),
         quantity: parseFloat(i.quantity) || 1,
         unit: i.unit.trim() || 'pcs',
@@ -113,14 +189,15 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
   }
 
   async function toggleStatus(p: Purchase) {
-    const next = p.status === 'pending' ? 'received' : 'pending';
-    await onStatusUpdate(p.id, next);
+    await onStatusUpdate(p.id, p.status === 'pending' ? 'received' : 'pending');
   }
 
-  function handlePrint() {
-    window.print();
-  }
+  const formTotal = formItems.reduce(
+    (s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.pricePerUnit) || 0), 0
+  );
+  const formValid = supplierName.trim() && formItems.some(i => i.name.trim());
 
+  // ── Form view ──
   if (view === 'form') {
     return (
       <div className="purchase-form-screen">
@@ -138,11 +215,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
           <div className="form-grid">
             <div className="form-field">
               <label>Supplier Name *</label>
-              <input
-                type="text" value={supplierName}
-                onChange={e => setSupplierName(e.target.value)}
-                placeholder="e.g. ABC Traders"
-              />
+              <input type="text" value={supplierName} onChange={e => setSupplierName(e.target.value)} placeholder="e.g. ABC Traders" />
             </div>
             <div className="form-row">
               <div className="form-field">
@@ -151,7 +224,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
               </div>
               <div className="form-field">
                 <label>Notes / Remarks</label>
-                <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional notes" />
+                <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional" />
               </div>
             </div>
           </div>
@@ -165,61 +238,52 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
             </div>
 
             <div className="pr-items-col-header">
-              <span style={{ flex: 3 }}>Item Name</span>
+              <span style={{ flex: 3 }}>Product</span>
               <span style={{ flex: 1 }}>Qty</span>
               <span style={{ flex: 1 }}>Unit</span>
-              <span style={{ flex: 1.5 }}>Price/Unit</span>
+              <span style={{ flex: 1.5 }}>Price/Unit (₹)</span>
               <span style={{ width: 28 }} />
             </div>
 
             {formItems.map((item, idx) => (
               <div key={idx} className="pr-item-row">
-                <input
-                  className="pr-item-input" style={{ flex: 3 }}
-                  type="text" value={item.name}
-                  onChange={e => updateItem(idx, 'name', e.target.value)}
-                  placeholder="Item name"
+                <ProductCombobox
+                  products={products}
+                  value={item.name}
+                  selectedId={item.productId}
+                  onSelect={p => selectProduct(idx, p)}
+                  onManualChange={name => updateItemName(idx, name)}
+                  onClear={() => clearProductSelection(idx)}
                 />
                 <input
                   className="pr-item-input" style={{ flex: 1 }}
                   type="number" min="0" value={item.quantity}
-                  onChange={e => updateItem(idx, 'quantity', e.target.value)}
+                  onChange={e => updateItemField(idx, 'quantity', e.target.value)}
                 />
                 <input
                   className="pr-item-input" style={{ flex: 1 }}
                   type="text" value={item.unit}
-                  onChange={e => updateItem(idx, 'unit', e.target.value)}
+                  onChange={e => updateItemField(idx, 'unit', e.target.value)}
                   placeholder="pcs"
                 />
                 <input
                   className="pr-item-input" style={{ flex: 1.5 }}
-                  type="number" min="0" value={item.pricePerUnit}
-                  onChange={e => updateItem(idx, 'pricePerUnit', e.target.value)}
-                  placeholder="₹0.00"
+                  type="number" min="0" step="0.01" value={item.pricePerUnit}
+                  onChange={e => updateItemField(idx, 'pricePerUnit', e.target.value)}
+                  placeholder="0.00"
                 />
-                <button
-                  className="pr-item-del"
-                  onClick={() => removeItem(idx)}
-                  disabled={formItems.length === 1}
-                  title="Remove"
-                >
+                <button className="pr-item-del" onClick={() => removeItem(idx)} disabled={formItems.length === 1} title="Remove">
                   <X size={13} />
                 </button>
               </div>
             ))}
 
-            <div className="pr-items-total">
-              Total: ₹{formItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.pricePerUnit) || 0), 0).toFixed(2)}
-            </div>
+            <div className="pr-items-total">Total: ₹{formTotal.toFixed(2)}</div>
           </div>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
             <button className="btn btn-ghost" onClick={() => setView('list')}>Cancel</button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={!supplierName.trim() || formItems.every(i => !i.name.trim()) || saving}
-            >
+            <button className="btn btn-primary" onClick={handleSave} disabled={!formValid || saving}>
               {saving ? 'Saving…' : 'Create Request'}
             </button>
           </div>
@@ -228,6 +292,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
     );
   }
 
+  // ── List view ──
   return (
     <div>
       <div className="screen-header">
@@ -261,7 +326,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                   </div>
                   <div className="bill-customer">{p.supplierName}</div>
                   <div className="bill-meta-text">
-                    {fmtDate(p.date)} &middot; {p.items.length} item{p.items.length !== 1 ? 's' : ''}
+                    {fmtDate(p.date)} · {p.items.length} item{p.items.length !== 1 ? 's' : ''}
                     {p.expectedDelivery && ` · Delivery: ${fmtDelivery(p.expectedDelivery)}`}
                   </div>
                 </div>
@@ -291,7 +356,9 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                       style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}
                       onClick={() => toggleStatus(p)}
                     >
-                      {p.status === 'pending' ? <><CheckCircle size={13} /> Mark Received</> : <><Clock size={13} /> Mark Pending</>}
+                      {p.status === 'pending'
+                        ? <><CheckCircle size={13} /> Mark Received</>
+                        : <><Clock size={13} /> Mark Pending</>}
                     </button>
                     <button
                       className="btn btn-ghost"
@@ -325,7 +392,6 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
             </div>
 
             <div className="modal-body purchase-qr-body" ref={printAreaRef}>
-              {/* Print header — only visible when printing */}
               <div className="purchase-print-header print-only">
                 <div className="purchase-print-shop">{shop.name}</div>
                 {shop.address && <div className="purchase-print-addr">{shop.address}</div>}
@@ -334,12 +400,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
 
               <div className="purchase-qr-content">
                 <div className="purchase-qr-code">
-                  <QRCode
-                    value={buildQR(qrPurchase)}
-                    size={180}
-                    style={{ display: 'block' }}
-                    className="purchase-qr-svg"
-                  />
+                  <QRCode value={buildQR(qrPurchase)} size={180} style={{ display: 'block' }} className="purchase-qr-svg" />
                 </div>
                 <div className="purchase-qr-number">{qrPurchase.purchaseNumber}</div>
                 <div className="purchase-qr-supplier">{qrPurchase.supplierName}</div>
@@ -371,18 +432,12 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                 </div>
               </div>
 
-              {qrPurchase.notes && (
-                <div className="purchase-print-notes">Note: {qrPurchase.notes}</div>
-              )}
+              {qrPurchase.notes && <div className="purchase-print-notes">Note: {qrPurchase.notes}</div>}
             </div>
 
             <div className="modal-footer no-print">
               <button className="btn btn-ghost" onClick={() => setQrPurchase(null)}>Close</button>
-              <button
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                onClick={handlePrint}
-              >
+              <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => window.print()}>
                 <Printer size={15} /> Print A4
               </button>
             </div>
