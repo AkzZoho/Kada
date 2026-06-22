@@ -3,6 +3,7 @@ import { Plus, QrCode, Printer, Trash2, CheckCircle, Clock, X, ArrowLeft, Packag
 import QRCode from 'react-qr-code';
 import type { Product, Purchase, PurchaseItem } from '../types';
 import { useShop } from '../App';
+import UnitInput from './UnitInput';
 
 interface PurchaseScreenProps {
   purchases: Purchase[];
@@ -263,11 +264,13 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                   type="number" min="0" value={item.quantity}
                   onChange={e => updateItemField(idx, 'quantity', e.target.value)}
                 />
-                <input
-                  className="pr-item-input" style={{ flex: 1 }}
-                  type="text" value={item.unit}
-                  onChange={e => updateItemField(idx, 'unit', e.target.value)}
-                  placeholder="pcs"
+                <UnitInput
+                  value={item.unit}
+                  onChange={v => updateItemField(idx, 'unit', v)}
+                  usedUnits={products.map(p => p.unit)}
+                  placeholder="unit"
+                  className="pr-item-input"
+                  style={{ flex: 1 }}
                 />
                 <input
                   className="pr-item-input" style={{ flex: 1.5 }}

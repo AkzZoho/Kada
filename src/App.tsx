@@ -121,7 +121,16 @@ export default function App() {
 
   async function handleBillSaved(bill: Bill) {
     setBills(prev => [bill, ...prev]);
-    if (shopId) await db.saveBill(shopId, bill); // queued by Firestore if offline
+    if (shopId) await db.saveBill(shopId, bill);
+    // Deduct stock for tracked products
+    const updatedProducts = products.map(p => {
+      if (p.stock === undefined) return p;
+      const billItem = bill.items.find(i => i.productId === p.id);
+      if (!billItem) return p;
+      return { ...p, stock: Math.max(0, p.stock - billItem.quantity) };
+    });
+    setProducts(updatedProducts);
+    if (shopId) await db.saveProducts(shopId, updatedProducts);
   }
 
   async function handleBillDelete(id: string) {
@@ -150,6 +159,20 @@ export default function App() {
   async function handlePurchaseStatusUpdate(id: string, status: 'pending' | 'received') {
     setPurchases(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     if (shopId) await db.updatePurchaseStatus(shopId, id, status);
+    // Add stock when purchase is marked received
+    if (status === 'received') {
+      const purchase = purchases.find(p => p.id === id);
+      if (purchase) {
+        const updatedProducts = products.map(p => {
+          if (p.stock === undefined) return p;
+          const item = purchase.items.find(i => i.productId === p.id);
+          if (!item) return p;
+          return { ...p, stock: p.stock + item.quantity };
+        });
+        setProducts(updatedProducts);
+        if (shopId) await db.saveProducts(shopId, updatedProducts);
+      }
+    }
   }
 
   async function handleSettingsSave(info: ShopInfo, ops: string[]) {

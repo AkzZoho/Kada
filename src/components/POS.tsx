@@ -59,7 +59,10 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
-      const matchSearch = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
+      const matchSearch = !q
+        || p.name.toLowerCase().includes(q)
+        || p.category.toLowerCase().includes(q)
+        || (p.sku && p.sku.toLowerCase().includes(q));
       const matchCat = !selectedCategory || p.category === selectedCategory;
       return matchSearch && matchCat;
     });
@@ -256,14 +259,19 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
               return (
                 <div
                   key={product.id}
-                  className={`product-card${cartItem ? ' in-cart' : ''}`}
-                  onClick={() => { if (!cartItem) addToCart(product); }}
+                  className={`product-card${cartItem ? ' in-cart' : ''}${product.stock === 0 ? ' out-of-stock' : ''}`}
+                  onClick={() => addToCart(product)}
                 >
                   <div className="pc-top">
                     {product.category ? <span className="prod-cat">{product.category}</span> : <span />}
                     {cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
                   </div>
                   <div className="prod-name">{product.name}</div>
+                  {product.stock !== undefined && (
+                    <div className={`pc-stock${product.stock === 0 ? ' pc-stock-out' : product.stock <= 5 ? ' pc-stock-low' : ' pc-stock-ok'}`}>
+                      {product.stock === 0 ? 'Out of stock' : `${product.stock} left`}
+                    </div>
+                  )}
                   <div className="pc-bottom">
                     <span className="prod-price">₹{product.price.toFixed(2)}</span>
                     {cartItem ? (

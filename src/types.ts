@@ -39,6 +39,7 @@ export interface Product {
   unit: string;
   gstRate: GSTRate;
   category: string;
+  stock?: number;
 }
 
 export interface CartItem {

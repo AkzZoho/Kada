@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, ClipboardList, Package, Banknote, CreditCard, Smartphone } from 'lucide-react';
+import { TrendingUp, ClipboardList, Package, Banknote, CreditCard, Smartphone, Users, ChevronDown } from 'lucide-react';
 import type { Bill } from '../types';
 import BillHistory from './BillHistory';
 
@@ -9,9 +9,15 @@ interface ReportsScreenProps {
 }
 
 type Period = 'today' | 'week' | 'month' | 'all';
-type Tab = 'sales' | 'history' | 'stock';
+type Tab = 'sales' | 'history' | 'stock' | 'customers';
 
 const PERIOD_LABELS: Record<Period, string> = { today: 'Today', week: 'This Week', month: 'This Month', all: 'All Time' };
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 function filterByPeriod(bills: Bill[], period: Period): Bill[] {
   if (period === 'all') return bills;
@@ -24,14 +30,45 @@ function filterByPeriod(bills: Bill[], period: Period): Bill[] {
     ws.setDate(today.getDate() - today.getDay());
     return bills.filter(b => new Date(b.date) >= ws);
   }
-  // month
   const ms = new Date(now.getFullYear(), now.getMonth(), 1);
   return bills.filter(b => new Date(b.date) >= ms);
+}
+
+interface CustomerSummary {
+  key: string;
+  name: string;
+  phone: string;
+  billCount: number;
+  totalSpend: number;
+  lastVisit: string;
+  bills: Bill[];
+}
+
+function buildCustomers(bills: Bill[]): CustomerSummary[] {
+  const map = new Map<string, CustomerSummary>();
+  for (const bill of bills) {
+    const name = bill.customerName?.trim() || '';
+    const phone = bill.customerPhone?.trim() || '';
+    if (!name && !phone) continue;
+    const key = phone || name.toLowerCase();
+    const existing = map.get(key);
+    if (existing) {
+      existing.billCount += 1;
+      existing.totalSpend += bill.grandTotal;
+      if (bill.date > existing.lastVisit) existing.lastVisit = bill.date;
+      existing.bills.push(bill);
+    } else {
+      map.set(key, { key, name, phone, billCount: 1, totalSpend: bill.grandTotal, lastVisit: bill.date, bills: [bill] });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.totalSpend - a.totalSpend);
 }
 
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
   const [tab, setTab] = useState<Tab>('sales');
   const [period, setPeriod] = useState<Period>('month');
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
+  const [custSearch, setCustSearch] = useState('');
 
   const filtered = React.useMemo(() => filterByPeriod(bills, period), [bills, period]);
 
@@ -75,11 +112,28 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
     return Array.from(itemMap.values()).sort((a, b) => b.qty - a.qty);
   }, [bills]);
 
+  const customers = React.useMemo(() => buildCustomers(bills), [bills]);
+
+  const filteredCustomers = React.useMemo(() => {
+    const q = custSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(c =>
+      c.name.toLowerCase().includes(q) || c.phone.includes(q)
+    );
+  }, [customers, custSearch]);
+
+  const TABS: [Tab, React.FC<{ size: number }>, string][] = [
+    ['sales', TrendingUp, 'Sales'],
+    ['history', ClipboardList, 'History'],
+    ['stock', Package, 'Stock'],
+    ['customers', Users, 'Customers'],
+  ];
+
   return (
     <div>
       {/* Tab Bar */}
       <div className="report-tabs">
-        {([['sales', TrendingUp, 'Sales'], ['history', ClipboardList, 'History'], ['stock', Package, 'Stock']] as [Tab, React.FC<{size:number}>, string][]).map(([id, Icon, label]) => (
+        {TABS.map(([id, Icon, label]) => (
           <button
             key={id}
             className={`report-tab${tab === id ? ' active' : ''}`}
@@ -94,20 +148,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
       {/* Sales Tab */}
       {tab === 'sales' && (
         <div>
-          {/* Period filter */}
           <div className="period-filter">
             {(Object.entries(PERIOD_LABELS) as [Period, string][]).map(([p, label]) => (
-              <button
-                key={p}
-                className={`period-btn${period === p ? ' active' : ''}`}
-                onClick={() => setPeriod(p)}
-              >
+              <button key={p} className={`period-btn${period === p ? ' active' : ''}`} onClick={() => setPeriod(p)}>
                 {label}
               </button>
             ))}
           </div>
 
-          {/* Stat cards */}
           <div className="stat-grid">
             <div className="stat-card">
               <div className="stat-label">Total Sales</div>
@@ -126,7 +174,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
             </div>
           </div>
 
-          {/* Payment breakdown */}
           <div className="report-section">
             <div className="report-section-title">Payment Breakdown</div>
             <div className="pay-breakdown">
@@ -139,15 +186,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
                   <span className="pbc-icon">{icon}</span>
                   <span className="pbc-mode">{mode}</span>
                   <span className="pbc-amount">₹{amount.toFixed(0)}</span>
-                  <div className="pbc-bar" style={{
-                    width: `${salesStats.totalSales > 0 ? (amount / salesStats.totalSales) * 100 : 0}%`,
-                  }} />
+                  <div className="pbc-bar" style={{ width: `${salesStats.totalSales > 0 ? (amount / salesStats.totalSales) * 100 : 0}%` }} />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Top products */}
           {salesStats.topItems.length > 0 && (
             <div className="report-section">
               <div className="report-section-title">Top Products</div>
@@ -178,16 +222,12 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
             </div>
           )}
 
-          {salesStats.billCount === 0 && (
-            <div className="no-bills">No bills in this period.</div>
-          )}
+          {salesStats.billCount === 0 && <div className="no-bills">No bills in this period.</div>}
         </div>
       )}
 
       {/* History Tab */}
-      {tab === 'history' && (
-        <BillHistory bills={bills} onDelete={onDelete} />
-      )}
+      {tab === 'history' && <BillHistory bills={bills} onDelete={onDelete} />}
 
       {/* Stock Tab */}
       {tab === 'stock' && (
@@ -224,6 +264,85 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Customers Tab */}
+      {tab === 'customers' && (
+        <div>
+          <div className="screen-header" style={{ marginBottom: 12 }}>
+            <div className="screen-header-text">
+              <h2>Customers</h2>
+              <p>{customers.length} customer{customers.length !== 1 ? 's' : ''} found</p>
+            </div>
+          </div>
+
+          <div className="history-filters" style={{ marginBottom: 16 }}>
+            <input
+              type="text"
+              placeholder="Search by name or phone..."
+              value={custSearch}
+              onChange={e => setCustSearch(e.target.value)}
+            />
+          </div>
+
+          {filteredCustomers.length === 0 ? (
+            <div className="no-bills">
+              {bills.length === 0
+                ? 'No bills yet. Customer history will appear once you start billing.'
+                : customers.length === 0
+                  ? 'No customer details found. Add customer name/phone when creating bills.'
+                  : 'No customers match your search.'}
+            </div>
+          ) : (
+            <div className="cust-list">
+              {filteredCustomers.map(c => (
+                <div key={c.key} className="cust-card">
+                  <div
+                    className="cust-card-header"
+                    onClick={() => setExpandedCustomer(expandedCustomer === c.key ? null : c.key)}
+                  >
+                    <div className="cust-card-left">
+                      <div className="cust-avatar">
+                        {(c.name || c.phone).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="cust-info">
+                        <div className="cust-name">{c.name || c.phone}</div>
+                        <div className="cust-meta">
+                          {c.phone && c.name && <span>{c.phone} · </span>}
+                          <span>{c.billCount} visit{c.billCount !== 1 ? 's' : ''}</span>
+                          <span> · Last: {fmtDate(c.lastVisit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="cust-card-right">
+                      <div className="cust-spend">₹{c.totalSpend.toFixed(0)}</div>
+                      <ChevronDown
+                        size={16}
+                        color="var(--text-muted)"
+                        style={{ transform: expandedCustomer === c.key ? 'rotate(180deg)' : undefined, transition: '0.2s' }}
+                      />
+                    </div>
+                  </div>
+
+                  {expandedCustomer === c.key && (
+                    <div className="cust-bills">
+                      {c.bills.sort((a, b) => b.date.localeCompare(a.date)).map(bill => (
+                        <div key={bill.id} className="cust-bill-row">
+                          <div className="cust-bill-left">
+                            <span className="cust-bill-num">{bill.billNumber}</span>
+                            <span className="cust-bill-date">{fmtDate(bill.date)}</span>
+                            <span className="cust-bill-items">{bill.items.length} item{bill.items.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="cust-bill-total">₹{bill.grandTotal.toFixed(2)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

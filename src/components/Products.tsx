@@ -2,13 +2,13 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Plus, Pencil, Trash2, QrCode, X, Printer } from 'lucide-react';
 import type { Product, GSTRate } from '../types';
+import UnitInput from './UnitInput';
 
 interface ProductsProps {
   products: Product[];
   onUpdate: (products: Product[]) => void;
 }
 
-const UNITS = ['piece', 'kg', 'g', 'litre', 'ml', 'box', 'set'];
 const GST_RATES: GSTRate[] = [0, 5, 12, 18, 28];
 
 interface FormState {
@@ -18,9 +18,10 @@ interface FormState {
   price: string;
   unit: string;
   gstRate: string;
+  stock: string;
 }
 
-const EMPTY_FORM: FormState = { sku: '', name: '', category: '', price: '', unit: 'piece', gstRate: '0' };
+const EMPTY_FORM: FormState = { sku: '', name: '', category: '', price: '', unit: 'piece', gstRate: '0', stock: '' };
 
 function nextSKU(products: Product[]): string {
   const nums = products
@@ -30,9 +31,15 @@ function nextSKU(products: Product[]): string {
   return `P${String((nums.length > 0 ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
 }
 
-// QR format: "KADA:{id}" — scanned by POS scanner to look up the product
 function qrData(p: Product): string {
   return `KADA:${p.id}\n${p.name}\n₹${p.price.toFixed(2)}/${p.unit}`;
+}
+
+function stockLabel(stock?: number): { text: string; cls: string } | null {
+  if (stock === undefined || stock === null) return null;
+  if (stock === 0) return { text: 'Out of stock', cls: 'stock-out' };
+  if (stock <= 5) return { text: `${stock} left`, cls: 'stock-low' };
+  return { text: `${stock} in stock`, cls: 'stock-ok' };
 }
 
 const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
@@ -41,6 +48,8 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [error, setError] = React.useState('');
   const [qrProduct, setQrProduct] = React.useState<Product | null>(null);
+
+  const usedUnits = React.useMemo(() => [...new Set(products.map(p => p.unit).filter(Boolean))], [products]);
 
   function openAdd() {
     setEditingProduct(null);
@@ -51,7 +60,15 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
 
   function openEdit(product: Product) {
     setEditingProduct(product);
-    setForm({ sku: product.sku ?? '', name: product.name, category: product.category, price: String(product.price), unit: product.unit, gstRate: String(product.gstRate) });
+    setForm({
+      sku: product.sku ?? '',
+      name: product.name,
+      category: product.category,
+      price: String(product.price),
+      unit: product.unit,
+      gstRate: String(product.gstRate),
+      stock: product.stock !== undefined ? String(product.stock) : '',
+    });
     setError('');
     setModalOpen(true);
   }
@@ -75,10 +92,13 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
 
     const otherProducts = editingProduct ? products.filter(p => p.id !== editingProduct.id) : products;
     const sku = form.sku.trim() || nextSKU(otherProducts);
+    const stockVal = form.stock.trim() !== '' ? Math.max(0, parseInt(form.stock, 10) || 0) : undefined;
     const productData: Product = {
       id: editingProduct ? editingProduct.id : crypto.randomUUID(),
       sku, name, category: form.category.trim(), price,
-      unit: form.unit, gstRate: parseInt(form.gstRate, 10) as GSTRate,
+      unit: form.unit || 'piece',
+      gstRate: parseInt(form.gstRate, 10) as GSTRate,
+      stock: stockVal,
     };
 
     if (editingProduct) {
@@ -115,29 +135,33 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
           </div>
         ) : (
           <div className="product-list">
-            {products.map((product) => (
-              <div key={product.id} className="pli">
-                <div className="pli-main">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                    {product.sku && <span className="sku-badge">{product.sku}</span>}
-                    <div className="pli-name" style={{ marginBottom: 0 }}>{product.name}</div>
+            {products.map((product) => {
+              const sl = stockLabel(product.stock);
+              return (
+                <div key={product.id} className="pli">
+                  <div className="pli-main">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                      {product.sku && <span className="sku-badge">{product.sku}</span>}
+                      <div className="pli-name" style={{ marginBottom: 0 }}>{product.name}</div>
+                    </div>
+                    <div className="pli-tags">
+                      {product.category && <span className="cat-badge">{product.category}</span>}
+                      <span className="gst-badge">{product.gstRate}%</span>
+                      <span className="unit-badge">{product.unit}</span>
+                      {sl && <span className={`stock-badge ${sl.cls}`}>{sl.text}</span>}
+                    </div>
                   </div>
-                  <div className="pli-tags">
-                    {product.category && <span className="cat-badge">{product.category}</span>}
-                    <span className="gst-badge">{product.gstRate}%</span>
-                    <span className="unit-badge">{product.unit}</span>
+                  <div className="pli-right">
+                    <div className="pli-price">₹{product.price.toFixed(2)}</div>
+                    <div className="pli-actions">
+                      <button className="icon-btn" title="QR Label" onClick={() => setQrProduct(product)}><QrCode size={14} /></button>
+                      <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}><Pencil size={14} /></button>
+                      <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}><Trash2 size={14} /></button>
+                    </div>
                   </div>
                 </div>
-                <div className="pli-right">
-                  <div className="pli-price">₹{product.price.toFixed(2)}</div>
-                  <div className="pli-actions">
-                    <button className="icon-btn" title="QR Label" onClick={() => setQrProduct(product)}><QrCode size={14} /></button>
-                    <button className="icon-btn edit" title="Edit" onClick={() => openEdit(product)}><Pencil size={14} /></button>
-                    <button className="icon-btn del" title="Delete" onClick={() => handleDelete(product.id)}><Trash2 size={14} /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -179,17 +203,38 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 </div>
                 <div className="form-row">
                   <div className="form-field">
-                    <label>Unit</label>
-                    <select value={form.unit} onChange={(e) => handleField('unit', e.target.value)}>
-                      {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                    <label>Unit of Measure</label>
+                    <UnitInput
+                      value={form.unit}
+                      onChange={v => handleField('unit', v)}
+                      usedUnits={usedUnits}
+                      className="form-input"
+                    />
                   </div>
                   <div className="form-field">
                     <label>GST Rate</label>
-                    <select value={form.gstRate} onChange={(e) => handleField('gstRate', e.target.value)}>
-                      {GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
-                    </select>
+                    <div className="gst-rate-pills">
+                      {GST_RATES.map(r => (
+                        <button
+                          key={r}
+                          type="button"
+                          className={`gst-pill${form.gstRate === String(r) ? ' active' : ''}`}
+                          onClick={() => handleField('gstRate', String(r))}
+                        >
+                          {r}%
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </div>
+                <div className="form-field">
+                  <label>Stock Count <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(optional — leave blank to not track)</span></label>
+                  <input
+                    type="number" min="0" step="1"
+                    value={form.stock}
+                    onChange={(e) => handleField('stock', e.target.value)}
+                    placeholder="e.g. 50"
+                  />
                 </div>
               </div>
             </div>
