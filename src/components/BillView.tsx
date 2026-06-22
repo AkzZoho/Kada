@@ -60,6 +60,7 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
   const taxSummary = buildTaxSummary(bill);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   function handlePrint() {
     const prev = document.title;
@@ -68,9 +69,9 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
     document.title = prev;
   }
 
-  async function handleShare() {
-    if (!invoiceRef.current || sharing) return;
-    setSharing(true);
+  async function doShare(setBusy: (v: boolean) => void) {
+    if (!invoiceRef.current) return;
+    setBusy(true);
     try {
       const blob = await captureInvoice(invoiceRef.current);
       const file = new File([blob], `${bill.billNumber}.png`, { type: 'image/png' });
@@ -80,13 +81,10 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
       };
 
       if (nav.share && nav.canShare?.({ files: [file] })) {
-        // Native share sheet with image file (mobile)
         await nav.share({ files: [file], title: `${bill.billNumber} — ${shop.name}` });
       } else if (nav.share) {
-        // Share supported but no file sharing — try image URL via object URL
         await nav.share({ title: `${bill.billNumber} — ${shop.name}` });
       } else {
-        // Desktop: download the image
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -95,11 +93,14 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
     } catch {
-      // user cancelled or share failed — silently ignore
+      // user cancelled — ignore
     } finally {
-      setSharing(false);
+      setBusy(false);
     }
   }
+
+  const handleShare  = () => { if (!sharing && !printing) doShare(setSharing); };
+  const handlePrintMobile = () => { if (!sharing && !printing) doShare(setPrinting); };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -249,20 +250,19 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
             className="btn"
             style={{ background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}
             onClick={handleShare}
-            disabled={sharing}
+            disabled={sharing || printing}
           >
-            {sharing
-              ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-              : <Share2 size={15} />
-            }
+            {sharing ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Share2 size={15} />}
             {sharing ? 'Preparing…' : 'Share'}
           </button>
-          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={isIOS ? handleShare : handlePrint}>
-            {isIOS
-              ? (sharing ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Printer size={15} />)
-              : <Printer size={15} />
-            }
-            {isIOS ? (sharing ? 'Preparing…' : 'Print / Share') : 'Print'}
+          <button
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={isIOS ? handlePrintMobile : handlePrint}
+            disabled={sharing || printing}
+          >
+            {printing ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Printer size={15} />}
+            {isIOS ? (printing ? 'Preparing…' : 'Print') : 'Print'}
           </button>
         </div>
 
