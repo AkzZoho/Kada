@@ -1288,32 +1288,55 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   color: var(--text-muted);
   margin-top: 8px;
 }
-/* Operator pick modal */
-.op-pick-modal { max-width: 360px; }
-.op-pick-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 20px 16px;
-}
-.op-pick-item {
+/* Custom select */
+.custom-select { position: relative; }
+.custom-select-trigger {
   width: 100%;
-  padding: 14px 16px;
-  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
   color: var(--text);
-  text-align: left;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: border-color 0.15s;
+  text-align: left;
 }
-.op-pick-item:hover, .op-pick-item:active {
-  background: var(--green-light);
-  border-color: var(--green);
-  color: var(--green-dark);
+.custom-select-trigger.open { border-color: var(--green); }
+.custom-select-trigger .placeholder { color: var(--text-muted); }
+.custom-select-chevron { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+.custom-select-chevron.flipped { transform: rotate(180deg); }
+.custom-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
 }
+.custom-select-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.custom-select-option:hover { background: var(--bg); }
+.custom-select-option.selected { color: var(--green-dark); font-weight: 500; }
+.custom-select-option + .custom-select-option { border-top: 1px solid var(--border); }
 
 /* Operator list */
 .op-list {
