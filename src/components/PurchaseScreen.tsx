@@ -86,7 +86,10 @@ const ProductCombobox: React.FC<ComboboxProps> = ({ products, value, selectedId,
               onMouseDown={e => e.preventDefault()}
               onClick={() => { onSelect(p); setOpen(false); }}
             >
-              <span className="pr-combobox-name">{p.name}</span>
+              <span className="pr-combobox-name">
+                {p.sku && <span className="pr-combobox-sku">{p.sku}</span>}
+                {p.name}
+              </span>
               <span className="pr-combobox-meta">
                 {p.category && <span className="pr-combobox-cat">{p.category}</span>}
                 ₹{p.price.toFixed(2)} / {p.unit}

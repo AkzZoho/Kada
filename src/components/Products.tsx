@@ -12,6 +12,7 @@ const UNITS = ['piece', 'kg', 'g', 'litre', 'ml', 'box', 'set'];
 const GST_RATES: GSTRate[] = [0, 5, 12, 18, 28];
 
 interface FormState {
+  sku: string;
   name: string;
   category: string;
   price: string;
@@ -19,7 +20,15 @@ interface FormState {
   gstRate: string;
 }
 
-const EMPTY_FORM: FormState = { name: '', category: '', price: '', unit: 'piece', gstRate: '0' };
+const EMPTY_FORM: FormState = { sku: '', name: '', category: '', price: '', unit: 'piece', gstRate: '0' };
+
+function nextSKU(products: Product[]): string {
+  const nums = products
+    .map(p => p.sku?.match(/^P(\d+)$/i)?.[1])
+    .filter(Boolean)
+    .map(Number);
+  return `P${String((nums.length > 0 ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+}
 
 // QR format: "KADA:{id}" — scanned by POS scanner to look up the product
 function qrData(p: Product): string {
@@ -42,7 +51,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
 
   function openEdit(product: Product) {
     setEditingProduct(product);
-    setForm({ name: product.name, category: product.category, price: String(product.price), unit: product.unit, gstRate: String(product.gstRate) });
+    setForm({ sku: product.sku ?? '', name: product.name, category: product.category, price: String(product.price), unit: product.unit, gstRate: String(product.gstRate) });
     setError('');
     setModalOpen(true);
   }
@@ -64,9 +73,11 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
     if (!name) { setError('Product name is required.'); return; }
     if (!form.price || isNaN(price) || price < 0) { setError('A valid price is required.'); return; }
 
+    const otherProducts = editingProduct ? products.filter(p => p.id !== editingProduct.id) : products;
+    const sku = form.sku.trim() || nextSKU(otherProducts);
     const productData: Product = {
       id: editingProduct ? editingProduct.id : crypto.randomUUID(),
-      name, category: form.category.trim(), price,
+      sku, name, category: form.category.trim(), price,
       unit: form.unit, gstRate: parseInt(form.gstRate, 10) as GSTRate,
     };
 
@@ -107,8 +118,10 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
             {products.map((product) => (
               <div key={product.id} className="pli">
                 <div className="pli-main">
-                  <div className="pli-name">{product.name}</div>
-                  <div className="pli-id">ID: {product.id}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                    {product.sku && <span className="sku-badge">{product.sku}</span>}
+                    <div className="pli-name" style={{ marginBottom: 0 }}>{product.name}</div>
+                  </div>
                   <div className="pli-tags">
                     {product.category && <span className="cat-badge">{product.category}</span>}
                     <span className="gst-badge">{product.gstRate}%</span>
@@ -144,9 +157,15 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 </div>
               )}
               <div className="form-grid">
-                <div className="form-field">
-                  <label>Product Name *</label>
-                  <input type="text" value={form.name} onChange={(e) => handleField('name', e.target.value)} placeholder="e.g. Silk Saree" autoFocus />
+                <div className="form-row">
+                  <div className="form-field" style={{ flex: 2 }}>
+                    <label>Product Name *</label>
+                    <input type="text" value={form.name} onChange={(e) => handleField('name', e.target.value)} placeholder="e.g. Silk Saree" autoFocus />
+                  </div>
+                  <div className="form-field" style={{ flex: 1 }}>
+                    <label>SKU / Code</label>
+                    <input type="text" value={form.sku} onChange={(e) => handleField('sku', e.target.value)} placeholder={editingProduct ? (editingProduct.sku || 'e.g. P001') : `e.g. ${nextSKU(products)}`} />
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-field">
@@ -199,7 +218,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 <div className="qr-label-code">
                   <QRCodeSVG value={qrData(qrProduct)} size={160} level="M" />
                 </div>
-                <div className="qr-label-id">{qrProduct.id}</div>
+                {qrProduct.sku && <div className="qr-label-sku">{qrProduct.sku}</div>}
                 <div className="qr-label-hint">Scan with Kada POS to add to cart</div>
               </div>
             </div>

@@ -23,21 +23,21 @@ function set(key: string, value: unknown) {
 }
 
 const SEED_PRODUCTS: Product[] = [
-  { id: 'p1',  name: 'Kasavu Saree',          category: 'Sarees & Fabrics',   price: 1850, unit: 'piece', gstRate: 5  },
-  { id: 'p2',  name: 'Kerala Cotton Set',      category: 'Clothing',            price: 650,  unit: 'piece', gstRate: 5  },
-  { id: 'p3',  name: 'Silk Dupatta',           category: 'Sarees & Fabrics',   price: 450,  unit: 'piece', gstRate: 5  },
-  { id: 'p4',  name: 'Handloom Churidar',      category: 'Clothing',            price: 780,  unit: 'piece', gstRate: 5  },
-  { id: 'p5',  name: 'Brass Nilavilakku',      category: 'Home & Décor',        price: 1200, unit: 'piece', gstRate: 12 },
-  { id: 'p6',  name: 'Coconut Shell Bowl Set', category: 'Home & Décor',        price: 320,  unit: 'set',   gstRate: 12 },
-  { id: 'p7',  name: 'Bamboo Basket',          category: 'Home & Décor',        price: 280,  unit: 'piece', gstRate: 12 },
-  { id: 'p8',  name: 'Sandalwood Soap',        category: 'Beauty & Wellness',   price: 120,  unit: 'piece', gstRate: 18 },
-  { id: 'p9',  name: 'Coconut Oil',            category: 'Grocery',             price: 180,  unit: 'litre', gstRate: 5  },
-  { id: 'p10', name: 'Kerala Matta Rice',      category: 'Grocery',             price: 75,   unit: 'kg',    gstRate: 0  },
-  { id: 'p11', name: 'Banana Chips',           category: 'Grocery',             price: 80,   unit: 'piece', gstRate: 5  },
-  { id: 'p12', name: 'Jackfruit Chips',        category: 'Grocery',             price: 90,   unit: 'piece', gstRate: 5  },
-  { id: 'p13', name: 'Silver Anklet',          category: 'Accessories',         price: 850,  unit: 'piece', gstRate: 5  },
-  { id: 'p14', name: 'Bead Necklace',          category: 'Accessories',         price: 420,  unit: 'piece', gstRate: 5  },
-  { id: 'p15', name: 'Jute Tote Bag',          category: 'Accessories',         price: 190,  unit: 'piece', gstRate: 5  },
+  { id: 'p1',  sku: 'P001', name: 'Kasavu Saree',          category: 'Sarees & Fabrics',   price: 1850, unit: 'piece', gstRate: 5  },
+  { id: 'p2',  sku: 'P002', name: 'Kerala Cotton Set',      category: 'Clothing',            price: 650,  unit: 'piece', gstRate: 5  },
+  { id: 'p3',  sku: 'P003', name: 'Silk Dupatta',           category: 'Sarees & Fabrics',   price: 450,  unit: 'piece', gstRate: 5  },
+  { id: 'p4',  sku: 'P004', name: 'Handloom Churidar',      category: 'Clothing',            price: 780,  unit: 'piece', gstRate: 5  },
+  { id: 'p5',  sku: 'P005', name: 'Brass Nilavilakku',      category: 'Home & Décor',        price: 1200, unit: 'piece', gstRate: 12 },
+  { id: 'p6',  sku: 'P006', name: 'Coconut Shell Bowl Set', category: 'Home & Décor',        price: 320,  unit: 'set',   gstRate: 12 },
+  { id: 'p7',  sku: 'P007', name: 'Bamboo Basket',          category: 'Home & Décor',        price: 280,  unit: 'piece', gstRate: 12 },
+  { id: 'p8',  sku: 'P008', name: 'Sandalwood Soap',        category: 'Beauty & Wellness',   price: 120,  unit: 'piece', gstRate: 18 },
+  { id: 'p9',  sku: 'P009', name: 'Coconut Oil',            category: 'Grocery',             price: 180,  unit: 'litre', gstRate: 5  },
+  { id: 'p10', sku: 'P010', name: 'Kerala Matta Rice',      category: 'Grocery',             price: 75,   unit: 'kg',    gstRate: 0  },
+  { id: 'p11', sku: 'P011', name: 'Banana Chips',           category: 'Grocery',             price: 80,   unit: 'piece', gstRate: 5  },
+  { id: 'p12', sku: 'P012', name: 'Jackfruit Chips',        category: 'Grocery',             price: 90,   unit: 'piece', gstRate: 5  },
+  { id: 'p13', sku: 'P013', name: 'Silver Anklet',          category: 'Accessories',         price: 850,  unit: 'piece', gstRate: 5  },
+  { id: 'p14', sku: 'P014', name: 'Bead Necklace',          category: 'Accessories',         price: 420,  unit: 'piece', gstRate: 5  },
+  { id: 'p15', sku: 'P015', name: 'Jute Tote Bag',          category: 'Accessories',         price: 190,  unit: 'piece', gstRate: 5  },
 ];
 
 function makeBill(

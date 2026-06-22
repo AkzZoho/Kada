@@ -57,7 +57,7 @@ export async function nextBillNumber(shopId: string): Promise<string> {
 
 export async function getProducts(shopId: string): Promise<Product[]> {
   const snap = await getDocs(collection(db, 'shops', shopId, 'products'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  return snap.docs.map(d => ({ sku: '', ...d.data(), id: d.id } as Product));
 }
 
 export async function saveProducts(shopId: string, products: Product[]) {

@@ -1016,25 +1016,47 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   font-weight: 500;
 }
 
-/* Product ID under name */
-.pli-id {
+/* SKU chip on product list */
+.sku-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
   font-family: 'Courier New', Courier, monospace;
   font-size: 10px;
-  color: var(--text-muted);
-  margin-bottom: 5px;
-  letter-spacing: 0.2px;
-  word-break: break-all;
-  user-select: all;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* QR modal product ID */
-.qr-label-id {
+/* SKU line below QR code in label modal */
+.qr-label-sku {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+/* SKU chip inside purchase combobox dropdown */
+.pr-combobox-sku {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
   font-family: 'Courier New', Courier, monospace;
   font-size: 9px;
-  color: var(--border);
-  word-break: break-all;
-  margin-bottom: 6px;
-  text-align: center;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 5px;
+  flex-shrink: 0;
 }
 
 .pli-right {
@@ -1094,6 +1116,7 @@ tr:hover td { background: rgba(42,138,87,0.04); }
 }
 .qr-label-code { display: flex; justify-content: center; margin-bottom: 10px; }
 .qr-label-hint { font-size: 11px; color: var(--text-muted); }
+.qr-label .qr-label-sku { margin-top: 4px; }
 
 /* ── History ── */
 .history-filters {
