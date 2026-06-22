@@ -2944,15 +2944,19 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   .report-tabs { overflow-x: auto; padding-bottom: 2px; }
   .report-tab { white-space: nowrap; flex-shrink: 0; }
 
-  /* Screen padding on mobile */
-  .screen { padding: 14px 12px !important; }
+  /* Screen padding on mobile — bottom clears the fixed nav bar */
+  .screen {
+    padding: 14px 12px calc(60px + env(safe-area-inset-bottom) + 20px) !important;
+  }
 
-  /* Bottom nav: safe area */
-  .bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+  /* POS product panel also scrolls, needs the same clearance */
+  .product-panel {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom) + 20px);
+  }
 
-  /* FAB above keyboard */
+  /* FAB sits above the fixed nav bar */
   .cart-fab {
-    bottom: calc(72px + env(safe-area-inset-bottom) + 8px) !important;
+    bottom: calc(60px + env(safe-area-inset-bottom) + 12px) !important;
   }
 
   /* Form fields: minimum touch target height */
