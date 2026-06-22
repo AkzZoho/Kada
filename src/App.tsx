@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { Receipt, Package, ClipboardList, Settings2, X, WifiOff } from 'lucide-react';
+import { Receipt, Package, ClipboardList, Settings2, WifiOff } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import * as db from './lib/db';
