@@ -1,5 +1,5 @@
-import { useState, useEffect, createContext, useContext, useRef } from 'react';
-import { Receipt, Package, ClipboardList, Settings2, X, WifiOff, ChevronDown, Check } from 'lucide-react';
+import { useState, useEffect, createContext, useContext } from 'react';
+import { Receipt, Package, ClipboardList, Settings2, X, WifiOff } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import * as db from './lib/db';
@@ -40,10 +40,6 @@ export default function App() {
     const s = localStorage.getItem('pos_screen');
     return (['products', 'history', 'settings'].includes(s ?? '')) ? s as Screen : 'pos';
   });
-  const [operatorPrompt, setOperatorPrompt] = useState(false);
-  const [selectedOp, setSelectedOp] = useState('');
-  const [opDropOpen, setOpDropOpen] = useState(false);
-  const opDropRef = useRef<HTMLDivElement>(null);
 
   // ── Auth ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -95,7 +91,6 @@ export default function App() {
       setOperators(ops);
       setBills(bls);
 
-      if (ops.length > 0 && !activeOp) setOperatorPrompt(true);
     } catch (e) {
       console.error('loadShopData error:', e);
     } finally {
@@ -217,50 +212,6 @@ function navigate(to: Screen) {
         ))}
       </nav>
 
-      {operatorPrompt && (
-        <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Who's on the counter?</h3>
-              <button className="modal-close" onClick={() => setOperatorPrompt(false)}><X size={18} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Select Operator</label>
-                <div className="custom-select" ref={opDropRef}>
-                  <button
-                    type="button"
-                    className={`custom-select-trigger${opDropOpen ? ' open' : ''}`}
-                    onClick={() => setOpDropOpen(o => !o)}
-                  >
-                    <span className={selectedOp ? '' : 'placeholder'}>{selectedOp || '— Choose —'}</span>
-                    <ChevronDown size={16} className={`custom-select-chevron${opDropOpen ? ' flipped' : ''}`} />
-                  </button>
-                  {opDropOpen && (
-                    <div className="custom-select-menu">
-                      {operators.map(op => (
-                        <button
-                          key={op}
-                          type="button"
-                          className={`custom-select-option${selectedOp === op ? ' selected' : ''}`}
-                          onClick={() => { setSelectedOp(op); setOpDropOpen(false); }}
-                        >
-                          {op}
-                          {selectedOp === op && <Check size={14} />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setOperatorPrompt(false)}>Skip</button>
-              <button className="btn btn-primary" disabled={!selectedOp} onClick={() => { handleOperatorChange(selectedOp); setOperatorPrompt(false); }}>Start Shift</button>
-            </div>
-          </div>
-        </div>
-      )}
     </ShopContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ScanLine, Minus, Plus, Trash2, ChevronLeft, Banknote, CreditCard, Smartphone, ShoppingCart } from 'lucide-react';
+import { Search, ScanLine, Minus, Plus, Trash2, ChevronLeft, Banknote, CreditCard, Smartphone, ShoppingCart, ChevronDown, Check } from 'lucide-react';
 import type { Product, CartItem, Bill, BillItem, PaymentMode } from '../types';
 import BillView from './BillView';
 import QRScanner from './QRScanner';
@@ -48,6 +48,7 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
   const [scannerOpen, setScannerOpen] = React.useState(false);
   const [scanMsg, setScanMsg] = React.useState('');
   const [saving, setSaving] = React.useState(false);
+  const [opDropOpen, setOpDropOpen] = React.useState(false);
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -169,16 +170,31 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
         <div className="pos-operator-bar">
           <span className="pos-operator-label">Operator</span>
           {operators.length > 0 ? (
-            <select
-              className="pos-operator-select"
-              value={operatorName}
-              onChange={e => onOperatorChange(e.target.value)}
-            >
-              <option value="">— Select —</option>
-              {operators.map(op => (
-                <option key={op} value={op}>{op}</option>
-              ))}
-            </select>
+            <div className="custom-select pos-operator-drop">
+              <button
+                type="button"
+                className={`custom-select-trigger${opDropOpen ? ' open' : ''}`}
+                onClick={() => setOpDropOpen(o => !o)}
+              >
+                <span className={operatorName ? '' : 'placeholder'}>{operatorName || '— Select —'}</span>
+                <ChevronDown size={14} className={`custom-select-chevron${opDropOpen ? ' flipped' : ''}`} />
+              </button>
+              {opDropOpen && (
+                <div className="custom-select-menu">
+                  {operators.map(op => (
+                    <button
+                      key={op}
+                      type="button"
+                      className={`custom-select-option${operatorName === op ? ' selected' : ''}`}
+                      onClick={() => { onOperatorChange(op); setOpDropOpen(false); }}
+                    >
+                      {op}
+                      {operatorName === op && <Check size={13} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <span className="pos-operator-empty">No operators — add in Settings</span>
           )}
