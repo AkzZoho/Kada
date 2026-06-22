@@ -1,13 +1,14 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { Receipt, Package, ClipboardList, Settings2, WifiOff } from 'lucide-react';
+import { Receipt, Package, ShoppingBag, BarChart2, Settings2, WifiOff } from 'lucide-react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import * as db from './lib/db';
-import type { Bill, Product, Screen, ShopInfo } from './types';
+import type { Bill, Product, Purchase, Screen, ShopInfo } from './types';
 import Sidebar from './components/Sidebar';
 import POS from './components/POS';
 import Products from './components/Products';
-import BillHistory from './components/BillHistory';
+import ReportsScreen from './components/ReportsScreen';
+import PurchaseScreen from './components/PurchaseScreen';
 import Settings from './components/Settings';
 import AuthScreen from './components/AuthScreen';
 import './index.css';
@@ -19,10 +20,11 @@ export const ShopContext = createContext<ShopInfo>({
 export const useShop = () => useContext(ShopContext);
 
 const BOTTOM_NAV: { id: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
-  { id: 'pos',      Icon: Receipt,       label: 'POS' },
-  { id: 'products', Icon: Package,       label: 'Products' },
-  { id: 'history',  Icon: ClipboardList, label: 'History' },
-  { id: 'settings', Icon: Settings2,     label: 'Settings' },
+  { id: 'pos',      Icon: Receipt,     label: 'POS' },
+  { id: 'products', Icon: Package,     label: 'Products' },
+  { id: 'purchase', Icon: ShoppingBag, label: 'Purchase' },
+  { id: 'reports',  Icon: BarChart2,   label: 'Reports' },
+  { id: 'settings', Icon: Settings2,   label: 'Settings' },
 ];
 
 const DEFAULT_SHOP: ShopInfo = { name: 'My Shop', address: '', gstin: '', phone: '', operatorName: '', logo: '' };
@@ -34,11 +36,12 @@ export default function App() {
   const [shopInfo, setShopInfo] = useState<ShopInfo>(DEFAULT_SHOP);
   const [products, setProducts] = useState<Product[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [operators, setOperators] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [screen, setScreen] = useState<Screen>(() => {
     const s = localStorage.getItem('pos_screen');
-    return (['products', 'history', 'settings'].includes(s ?? '')) ? s as Screen : 'pos';
+    return (['products', 'purchase', 'history', 'reports', 'settings'].includes(s ?? '')) ? s as Screen : 'pos';
   });
 
   // ── Auth ─────────────────────────────────────────────────────
@@ -81,15 +84,17 @@ export default function App() {
       const activeOp = localStorage.getItem(`pos_operator_${shop.id}`) ?? '';
       setShopInfo({ ...shop.info, operatorName: activeOp || shop.info.operatorName });
 
-      const [prods, ops, bls] = await Promise.all([
+      const [prods, ops, bls, purs] = await Promise.all([
         db.getProducts(shop.id),
         db.getOperators(shop.id),
         db.getBills(shop.id),
+        db.getPurchases(shop.id),
       ]);
 
       setProducts(prods);
       setOperators(ops);
       setBills(bls);
+      setPurchases(purs);
 
     } catch (e) {
       console.error('loadShopData error:', e);
@@ -124,6 +129,29 @@ export default function App() {
     if (shopId) await db.deleteBill(shopId, id); // queued by Firestore if offline
   }
 
+  async function handleNextPurchaseNumber(): Promise<string> {
+    try {
+      return await db.nextPurchaseNumber(shopId);
+    } catch {
+      return `PR-${String(purchases.length + 1).padStart(4, '0')}`;
+    }
+  }
+
+  async function handlePurchaseSave(purchase: Purchase) {
+    setPurchases(prev => [purchase, ...prev]);
+    if (shopId) await db.savePurchase(shopId, purchase);
+  }
+
+  async function handlePurchaseDelete(id: string) {
+    setPurchases(prev => prev.filter(p => p.id !== id));
+    if (shopId) await db.deletePurchase(shopId, id);
+  }
+
+  async function handlePurchaseStatusUpdate(id: string, status: 'pending' | 'received') {
+    setPurchases(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    if (shopId) await db.updatePurchaseStatus(shopId, id, status);
+  }
+
   async function handleSettingsSave(info: ShopInfo, ops: string[]) {
     setShopInfo(info);
     setOperators(ops);
@@ -150,6 +178,7 @@ function navigate(to: Screen) {
     setShopId('');
     setBills([]);
     setProducts([]);
+    setPurchases([]);
     setOperators([]);
     setShopInfo(DEFAULT_SHOP);
   }
@@ -196,7 +225,18 @@ function navigate(to: Screen) {
             />
           )}
           {screen === 'products' && <Products products={products} onUpdate={handleProductsUpdate} />}
-          {screen === 'history' && <BillHistory bills={bills} onDelete={handleBillDelete} />}
+          {screen === 'purchase' && (
+            <PurchaseScreen
+              purchases={purchases}
+              nextPurchaseNumber={handleNextPurchaseNumber}
+              onSave={handlePurchaseSave}
+              onDelete={handlePurchaseDelete}
+              onStatusUpdate={handlePurchaseStatusUpdate}
+            />
+          )}
+          {(screen === 'history' || screen === 'reports') && (
+            <ReportsScreen bills={bills} onDelete={handleBillDelete} />
+          )}
           {screen === 'settings' && (
             <Settings shopInfo={shopInfo} operators={operators} onSave={handleSettingsSave} />
           )}

@@ -67,19 +67,30 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
 
   const totals: Totals = React.useMemo(() => {
     const discountAmt = Math.max(0, parseFloat(discount) || 0);
-    const itemTotals = cart.map((ci) => {
+    const rawItems = cart.map((ci) => {
       const rate = ci.product.gstRate;
       const taxableAmount = (ci.product.price * ci.quantity) / (1 + rate / 100);
       const cgst = (taxableAmount * rate) / 200;
-      const sgst = (taxableAmount * rate) / 200;
+      const sgst = cgst;
       return { productId: ci.product.id, taxableAmount, cgst, sgst, lineTotal: taxableAmount + cgst + sgst };
     });
-    const subtotal = itemTotals.reduce((s, i) => s + i.taxableAmount, 0);
+    const rawSubtotal = rawItems.reduce((s, i) => s + i.taxableAmount, 0);
+    // Discount reduces taxable base; GST scales proportionally with it
+    const cappedDiscount = Math.min(discountAmt, rawSubtotal);
+    const ratio = rawSubtotal > 0 ? (rawSubtotal - cappedDiscount) / rawSubtotal : 1;
+    const itemTotals = rawItems.map(i => ({
+      ...i,
+      taxableAmount: i.taxableAmount * ratio,
+      cgst: i.cgst * ratio,
+      sgst: i.sgst * ratio,
+      lineTotal: i.lineTotal * ratio,
+    }));
     const totalCGST = itemTotals.reduce((s, i) => s + i.cgst, 0);
     const totalSGST = itemTotals.reduce((s, i) => s + i.sgst, 0);
     const totalGST = totalCGST + totalSGST;
-    const grandTotal = Math.max(0, subtotal + totalGST - discountAmt);
-    return { items: itemTotals, subtotal, totalCGST, totalSGST, totalGST, discountAmt, grandTotal };
+    const grandTotal = (rawSubtotal - cappedDiscount) + totalGST;
+    // Store raw subtotal so invoice can display: rawSubtotal − discount + discountedGST = grandTotal
+    return { items: itemTotals, subtotal: rawSubtotal, totalCGST, totalSGST, totalGST, discountAmt: cappedDiscount, grandTotal };
   }, [cart, discount]);
 
   function addToCart(product: Product) {

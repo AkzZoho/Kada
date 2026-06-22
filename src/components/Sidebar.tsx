@@ -1,5 +1,5 @@
 import React from 'react';
-import { Receipt, Package, ClipboardList, Settings2, User, LogOut } from 'lucide-react';
+import { Receipt, Package, Settings2, User, LogOut, ShoppingBag, BarChart2 } from 'lucide-react';
 import type { Screen, ShopInfo } from '../types';
 
 interface SidebarProps {
@@ -18,9 +18,10 @@ function formatDate(date: Date): string {
 }
 
 const NAV_ITEMS: { screen: Screen; Icon: React.FC<{ size: number }>; label: string }[] = [
-  { screen: 'pos',      Icon: Receipt,       label: 'POS' },
-  { screen: 'products', Icon: Package,        label: 'Products' },
-  { screen: 'history',  Icon: ClipboardList,  label: 'History' },
+  { screen: 'pos',      Icon: Receipt,      label: 'POS' },
+  { screen: 'products', Icon: Package,      label: 'Products' },
+  { screen: 'purchase', Icon: ShoppingBag,  label: 'Purchase' },
+  { screen: 'reports',  Icon: BarChart2,    label: 'Reports' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings, onSignOut }) => {

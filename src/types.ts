@@ -9,7 +9,26 @@ export interface ShopInfo {
   logo: string;
 }
 export type PaymentMode = 'cash' | 'card' | 'upi';
-export type Screen = 'pos' | 'products' | 'history' | 'settings';
+export type Screen = 'pos' | 'products' | 'purchase' | 'history' | 'reports' | 'settings';
+
+export interface PurchaseItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  pricePerUnit: number;
+}
+
+export interface Purchase {
+  id: string;
+  purchaseNumber: string;
+  date: string;
+  supplierName: string;
+  expectedDelivery: string;
+  notes: string;
+  items: PurchaseItem[];
+  status: 'pending' | 'received';
+  totalAmount: number;
+}
 
 export interface Product {
   id: string;

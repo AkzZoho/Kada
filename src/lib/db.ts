@@ -3,7 +3,7 @@ import {
   query, orderBy, runTransaction, writeBatch, where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Bill, Product, ShopInfo } from '../types';
+import type { Bill, Product, Purchase, ShopInfo } from '../types';
 
 // ── Shop ─────────────────────────────────────────────────────
 
@@ -97,4 +97,37 @@ export async function saveBill(shopId: string, bill: Bill) {
 
 export async function deleteBill(shopId: string, billId: string) {
   await deleteDoc(doc(db, 'shops', shopId, 'bills', billId));
+}
+
+// ── Purchases ────────────────────────────────────────────────
+
+export async function nextPurchaseNumber(shopId: string): Promise<string> {
+  const shopRef = doc(db, 'shops', shopId);
+  const counter = await runTransaction(db, async (txn) => {
+    const snap = await txn.get(shopRef);
+    const next = (snap.data()?.purchaseCounter ?? 0) + 1;
+    txn.update(shopRef, { purchaseCounter: next });
+    return next;
+  });
+  return `PR-${String(counter).padStart(4, '0')}`;
+}
+
+export async function getPurchases(shopId: string): Promise<Purchase[]> {
+  const snap = await getDocs(
+    query(collection(db, 'shops', shopId, 'purchases'), orderBy('date', 'desc'))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Purchase));
+}
+
+export async function savePurchase(shopId: string, purchase: Purchase) {
+  const { id, ...data } = purchase;
+  await setDoc(doc(db, 'shops', shopId, 'purchases', id), data);
+}
+
+export async function deletePurchase(shopId: string, purchaseId: string) {
+  await deleteDoc(doc(db, 'shops', shopId, 'purchases', purchaseId));
+}
+
+export async function updatePurchaseStatus(shopId: string, purchaseId: string, status: 'pending' | 'received') {
+  await updateDoc(doc(db, 'shops', shopId, 'purchases', purchaseId), { status });
 }
