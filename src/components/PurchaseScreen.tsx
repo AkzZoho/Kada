@@ -141,7 +141,7 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
   }
 
   function clearProductSelection(idx: number) {
-    setFormItems(prev => prev.map((item, i) => i !== idx ? item : { ...item, productId: undefined, name: '', unit: 'pcs' }));
+    setFormItems(prev => prev.map((item, i) => i !== idx ? item : { ...item, productId: undefined, name: '', unit: '' }));
   }
 
   function updateItemName(idx: number, name: string) {
@@ -266,14 +266,18 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                   type="number" min="0" value={item.quantity}
                   onChange={e => updateItemField(idx, 'quantity', e.target.value)}
                 />
-                <UnitSelect
-                  value={item.unit}
-                  onChange={v => updateItemField(idx, 'unit', v)}
-                  units={units}
-                  onAddUnit={onAddUnit}
-                  placeholder="Unit"
-                  style={{ flex: 1 }}
-                />
+                {item.productId ? (
+                  <div className="pr-item-unit-lock" style={{ flex: 1 }}>{item.unit}</div>
+                ) : (
+                  <UnitSelect
+                    value={item.unit}
+                    onChange={v => updateItemField(idx, 'unit', v)}
+                    units={units}
+                    onAddUnit={onAddUnit}
+                    placeholder="Unit"
+                    style={{ flex: 1 }}
+                  />
+                )}
                 <input
                   className="pr-item-input" style={{ flex: 1.5 }}
                   type="number" min="0" step="0.01" value={item.pricePerUnit}

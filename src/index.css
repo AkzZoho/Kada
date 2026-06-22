@@ -2359,6 +2359,18 @@ tr:hover td { background: rgba(42,138,87,0.04); }
   transition: border-color var(--transition);
 }
 .pr-item-input:focus { border-color: var(--green); background: #fff; }
+.pr-item-unit-lock {
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text-muted);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
 .pr-item-del {
   width: 28px; height: 28px;
   border-radius: 6px;
@@ -3024,13 +3036,9 @@ tr:hover td { background: rgba(42,138,87,0.04); }
 }
 .us-chevron.flipped { transform: rotate(180deg); }
 
-/* Dropdown panel */
+/* Dropdown panel — rendered via portal (position: fixed set inline) */
 .us-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 400;
+  z-index: 9999;
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
