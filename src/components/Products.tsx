@@ -53,7 +53,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
 
   function openAdd() {
     setEditingProduct(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, sku: nextSKU(products) });
     setError('');
     setModalOpen(true);
   }
@@ -188,7 +188,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
                   </div>
                   <div className="form-field" style={{ flex: 1 }}>
                     <label>SKU / Code</label>
-                    <input type="text" value={form.sku} onChange={(e) => handleField('sku', e.target.value)} placeholder={editingProduct ? (editingProduct.sku || 'e.g. P001') : `e.g. ${nextSKU(products)}`} />
+                    <input type="text" value={form.sku} onChange={(e) => handleField('sku', e.target.value)} placeholder="e.g. P001" />
                   </div>
                 </div>
                 <div className="form-row">
