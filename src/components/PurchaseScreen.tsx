@@ -3,7 +3,7 @@ import { Plus, QrCode, Printer, Trash2, CheckCircle, Clock, X, ArrowLeft, Packag
 import QRCode from 'react-qr-code';
 import type { Product, Purchase, PurchaseItem } from '../types';
 import { useShop } from '../App';
-import UnitInput from './UnitInput';
+import UnitSelect from './UnitSelect';
 
 interface PurchaseScreenProps {
   purchases: Purchase[];
@@ -12,6 +12,8 @@ interface PurchaseScreenProps {
   onSave: (purchase: Purchase) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onStatusUpdate: (id: string, status: 'pending' | 'received') => Promise<void>;
+  units: string[];
+  onAddUnit: (unit: string) => void;
 }
 
 interface FormItem {
@@ -104,10 +106,10 @@ const ProductCombobox: React.FC<ComboboxProps> = ({ products, value, selectedId,
 };
 
 // ── Main Screen ──────────────────────────────────────────────
-const EMPTY_ITEM: FormItem = { name: '', quantity: '1', unit: 'pcs', pricePerUnit: '' };
+const EMPTY_ITEM: FormItem = { name: '', quantity: '1', unit: '', pricePerUnit: '' };
 
 const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
-  purchases, products, nextPurchaseNumber, onSave, onDelete, onStatusUpdate,
+  purchases, products, nextPurchaseNumber, onSave, onDelete, onStatusUpdate, units, onAddUnit,
 }) => {
   const shop = useShop();
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -264,12 +266,12 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                   type="number" min="0" value={item.quantity}
                   onChange={e => updateItemField(idx, 'quantity', e.target.value)}
                 />
-                <UnitInput
+                <UnitSelect
                   value={item.unit}
                   onChange={v => updateItemField(idx, 'unit', v)}
-                  usedUnits={products.map(p => p.unit)}
-                  placeholder="unit"
-                  className="pr-item-input"
+                  units={units}
+                  onAddUnit={onAddUnit}
+                  placeholder="Unit"
                   style={{ flex: 1 }}
                 />
                 <input

@@ -38,6 +38,7 @@ export default function App() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [operators, setOperators] = useState<string[]>([]);
+  const [units, setUnits] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [screen, setScreen] = useState<Screen>(() => {
     const s = localStorage.getItem('pos_screen');
@@ -71,30 +72,28 @@ export default function App() {
 
   async function loadShopData(userId: string) {
     try {
-      // Try to load from Firestore (serves from IndexedDB cache when offline)
       let shop = await db.getShop(userId);
-
-      // First-time user: create shop (requires network)
       if (!shop) shop = await db.createShop(userId);
 
-      // Cache shopId locally so we can reference it offline before query cache warms up
       localStorage.setItem(`pos_shopid_${userId}`, shop.id);
       setShopId(shop.id);
 
       const activeOp = localStorage.getItem(`pos_operator_${shop.id}`) ?? '';
       setShopInfo({ ...shop.info, operatorName: activeOp || shop.info.operatorName });
 
-      const [prods, ops, bls, purs] = await Promise.all([
+      const [prods, ops, bls, purs, uns] = await Promise.all([
         db.getProducts(shop.id),
         db.getOperators(shop.id),
         db.getBills(shop.id),
         db.getPurchases(shop.id),
+        db.getUnits(shop.id),
       ]);
 
       setProducts(prods);
       setOperators(ops);
       setBills(bls);
       setPurchases(purs);
+      setUnits(uns);
 
     } catch (e) {
       console.error('loadShopData error:', e);
@@ -103,16 +102,26 @@ export default function App() {
     }
   }
 
-  // ── Mutations (Firestore queues writes when offline automatically) ──
+  // ── Mutations ─────────────────────────────────────────────────
 
   async function handleProductsUpdate(updated: Product[]) {
     setProducts(updated);
     if (shopId) await db.saveProducts(shopId, updated);
   }
 
+  async function handleUnitsUpdate(updated: string[]) {
+    setUnits(updated);
+    if (shopId) await db.saveUnits(shopId, updated);
+  }
+
+  function handleAddUnit(unit: string) {
+    const trimmed = unit.trim();
+    if (!trimmed || units.includes(trimmed)) return;
+    handleUnitsUpdate([...units, trimmed]);
+  }
+
   async function handleNextBillNumber(): Promise<string> {
     try {
-      // runTransaction requires network; falls back to local count if offline
       return await db.nextBillNumber(shopId);
     } catch {
       return `BILL-${String(bills.length + 1).padStart(4, '0')}`;
@@ -122,7 +131,6 @@ export default function App() {
   async function handleBillSaved(bill: Bill) {
     setBills(prev => [bill, ...prev]);
     if (shopId) await db.saveBill(shopId, bill);
-    // Deduct stock for tracked products
     const updatedProducts = products.map(p => {
       if (p.stock === undefined) return p;
       const billItem = bill.items.find(i => i.productId === p.id);
@@ -135,7 +143,7 @@ export default function App() {
 
   async function handleBillDelete(id: string) {
     setBills(prev => prev.filter(b => b.id !== id));
-    if (shopId) await db.deleteBill(shopId, id); // queued by Firestore if offline
+    if (shopId) await db.deleteBill(shopId, id);
   }
 
   async function handleNextPurchaseNumber(): Promise<string> {
@@ -159,7 +167,6 @@ export default function App() {
   async function handlePurchaseStatusUpdate(id: string, status: 'pending' | 'received') {
     setPurchases(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     if (shopId) await db.updatePurchaseStatus(shopId, id, status);
-    // Add stock when purchase is marked received
     if (status === 'received') {
       const purchase = purchases.find(p => p.id === id);
       if (purchase) {
@@ -189,7 +196,7 @@ export default function App() {
     setShopInfo(prev => ({ ...prev, operatorName: name }));
   }
 
-function navigate(to: Screen) {
+  function navigate(to: Screen) {
     setScreen(to);
     localStorage.setItem('pos_screen', to);
     window.scrollTo(0, 0);
@@ -203,6 +210,7 @@ function navigate(to: Screen) {
     setProducts([]);
     setPurchases([]);
     setOperators([]);
+    setUnits([]);
     setShopInfo(DEFAULT_SHOP);
   }
 
@@ -247,7 +255,14 @@ function navigate(to: Screen) {
               onBillSaved={handleBillSaved}
             />
           )}
-          {screen === 'products' && <Products products={products} onUpdate={handleProductsUpdate} />}
+          {screen === 'products' && (
+            <Products
+              products={products}
+              onUpdate={handleProductsUpdate}
+              units={units}
+              onAddUnit={handleAddUnit}
+            />
+          )}
           {screen === 'purchase' && (
             <PurchaseScreen
               purchases={purchases}
@@ -256,13 +271,21 @@ function navigate(to: Screen) {
               onSave={handlePurchaseSave}
               onDelete={handlePurchaseDelete}
               onStatusUpdate={handlePurchaseStatusUpdate}
+              units={units}
+              onAddUnit={handleAddUnit}
             />
           )}
           {(screen === 'history' || screen === 'reports') && (
             <ReportsScreen bills={bills} onDelete={handleBillDelete} />
           )}
           {screen === 'settings' && (
-            <Settings shopInfo={shopInfo} operators={operators} onSave={handleSettingsSave} />
+            <Settings
+              shopInfo={shopInfo}
+              operators={operators}
+              units={units}
+              onSave={handleSettingsSave}
+              onUnitsChange={handleUnitsUpdate}
+            />
           )}
         </div>
       </div>

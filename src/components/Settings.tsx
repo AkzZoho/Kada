@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Store, Users, Save, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Store, Users, Save, Plus, Trash2, Upload, X, Ruler } from 'lucide-react';
 import type { ShopInfo } from '../types';
 
 interface SettingsProps {
   shopInfo: ShopInfo;
   operators: string[];
+  units: string[];
   onSave: (info: ShopInfo, operators: string[]) => void;
+  onUnitsChange: (units: string[]) => void;
 }
 
 function compressImage(file: File, maxSize = 240): Promise<string> {
@@ -27,10 +29,11 @@ function compressImage(file: File, maxSize = 240): Promise<string> {
   });
 }
 
-const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators, onSave }) => {
+const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators, units, onSave, onUnitsChange }) => {
   const [form, setForm] = useState<ShopInfo>(shopInfo);
   const [operators, setOperators] = useState<string[]>(initOperators);
   const [newOp, setNewOp] = useState('');
+  const [newUnit, setNewUnit] = useState('');
   const [saved, setSaved] = useState(false);
 
   function set(field: keyof ShopInfo) {
@@ -56,6 +59,17 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
   function removeOperator(name: string) {
     setOperators(prev => prev.filter(o => o !== name));
     if (form.operatorName === name) setForm(f => ({ ...f, operatorName: '' }));
+  }
+
+  function addUnit() {
+    const unit = newUnit.trim();
+    if (!unit || units.includes(unit)) return;
+    onUnitsChange([...units, unit]);
+    setNewUnit('');
+  }
+
+  function removeUnit(unit: string) {
+    onUnitsChange(units.filter(u => u !== unit));
   }
 
   function handleSave() {
@@ -87,7 +101,6 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
           Shop Details
         </div>
 
-        {/* Logo upload */}
         <div className="logo-upload-row">
           <div className="logo-upload-preview">
             {form.logo
@@ -129,6 +142,54 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
               <input type="tel" value={form.phone} onChange={set('phone')} placeholder="e.g. 9876543210" />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Units of Measure */}
+      <div className="settings-section">
+        <div className="settings-section-title">
+          <Ruler size={15} />
+          Units of Measure
+        </div>
+
+        <div className="settings-hint" style={{ marginBottom: 12 }}>
+          These units appear across Products, Purchase Requests, and billing. Changes apply immediately.
+        </div>
+
+        <div className="unit-chips">
+          {units.map(u => (
+            <div key={u} className="unit-chip">
+              <span>{u}</span>
+              <button
+                className="unit-chip-del"
+                onClick={() => removeUnit(u)}
+                title={`Remove "${u}"`}
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ))}
+          {units.length === 0 && (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No units yet — add one below.</div>
+          )}
+        </div>
+
+        <div className="op-add-row" style={{ marginTop: 14 }}>
+          <input
+            type="text"
+            className="op-add-input"
+            placeholder="Add unit (e.g. dozen, sachet, mala)…"
+            value={newUnit}
+            onChange={e => setNewUnit(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addUnit()}
+          />
+          <button
+            className="btn btn-ghost op-add-btn"
+            onClick={addUnit}
+            disabled={!newUnit.trim() || units.includes(newUnit.trim())}
+          >
+            <Plus size={15} /> Add
+          </button>
         </div>
       </div>
 

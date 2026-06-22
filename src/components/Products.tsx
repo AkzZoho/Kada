@@ -2,11 +2,13 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Plus, Pencil, Trash2, QrCode, X, Printer } from 'lucide-react';
 import type { Product, GSTRate } from '../types';
-import UnitInput from './UnitInput';
+import UnitSelect from './UnitSelect';
 
 interface ProductsProps {
   products: Product[];
   onUpdate: (products: Product[]) => void;
+  units: string[];
+  onAddUnit: (unit: string) => void;
 }
 
 const GST_RATES: GSTRate[] = [0, 5, 12, 18, 28];
@@ -42,14 +44,12 @@ function stockLabel(stock?: number): { text: string; cls: string } | null {
   return { text: `${stock} in stock`, cls: 'stock-ok' };
 }
 
-const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
+const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUnit }) => {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [error, setError] = React.useState('');
   const [qrProduct, setQrProduct] = React.useState<Product | null>(null);
-
-  const usedUnits = React.useMemo(() => [...new Set(products.map(p => p.unit).filter(Boolean))], [products]);
 
   function openAdd() {
     setEditingProduct(null);
@@ -204,11 +204,11 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate }) => {
                 <div className="form-row">
                   <div className="form-field">
                     <label>Unit of Measure</label>
-                    <UnitInput
+                    <UnitSelect
                       value={form.unit}
                       onChange={v => handleField('unit', v)}
-                      usedUnits={usedUnits}
-                      className="form-input"
+                      units={units}
+                      onAddUnit={onAddUnit}
                     />
                   </div>
                   <div className="form-field">

@@ -137,3 +137,23 @@ export async function deletePurchase(shopId: string, purchaseId: string) {
 export async function updatePurchaseStatus(shopId: string, purchaseId: string, status: 'pending' | 'received') {
   await updateDoc(doc(db, 'shops', shopId, 'purchases', purchaseId), { status });
 }
+
+// ── Units of Measure ─────────────────────────────────────────
+
+const DEFAULT_UNITS = [
+  'piece', 'nos', 'pair', 'dozen', 'set', 'bundle',
+  'kg', 'g', 'litre', 'ml',
+  'metre', 'cm',
+  'box', 'packet', 'crate', 'bag', 'sachet',
+];
+
+export async function getUnits(shopId: string): Promise<string[]> {
+  const snap = await getDoc(doc(db, 'shops', shopId, 'meta', 'units'));
+  if (snap.exists()) return snap.data().list as string[];
+  await setDoc(doc(db, 'shops', shopId, 'meta', 'units'), { list: DEFAULT_UNITS });
+  return DEFAULT_UNITS;
+}
+
+export async function saveUnits(shopId: string, units: string[]) {
+  await setDoc(doc(db, 'shops', shopId, 'meta', 'units'), { list: units });
+}
