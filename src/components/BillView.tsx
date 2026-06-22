@@ -53,6 +53,8 @@ async function captureInvoice(el: HTMLElement): Promise<Blob> {
   );
 }
 
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
   const shop: ShopInfo = useShop();
   const taxSummary = buildTaxSummary(bill);
@@ -255,8 +257,12 @@ const BillView: React.FC<BillViewProps> = ({ bill, onClose }) => {
             }
             {sharing ? 'Preparing…' : 'Share'}
           </button>
-          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={handlePrint}>
-            <Printer size={15} /> Print
+          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={isIOS ? handleShare : handlePrint}>
+            {isIOS
+              ? (sharing ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Printer size={15} />)
+              : <Printer size={15} />
+            }
+            {isIOS ? (sharing ? 'Preparing…' : 'Print / Share') : 'Print'}
           </button>
         </div>
 
