@@ -276,7 +276,7 @@ export default function App() {
             />
           )}
           {(screen === 'history' || screen === 'reports') && (
-            <ReportsScreen bills={bills} onDelete={handleBillDelete} />
+            <ReportsScreen bills={bills} products={products} onDelete={handleBillDelete} />
           )}
           {screen === 'settings' && (
             <Settings

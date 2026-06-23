@@ -2753,6 +2753,33 @@ tr:hover td { background: rgba(42,138,87,0.04); }
 .stock-badge.stock-low { background: #FEF3C7; color: #92400E; }
 .stock-badge.stock-out { background: #FEE2E2; color: #991B1B; }
 
+/* Stock report summary row */
+.stock-summary-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stock-summary-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+}
+.stock-summary-chip .stock-summary-count {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1;
+}
+.stock-summary-chip.out { background: #FEE2E2; color: #991B1B; }
+.stock-summary-chip.low { background: #FEF3C7; color: #92400E; }
+.stock-summary-chip.ok  { background: #DCFCE7; color: #166534; }
+
 /* Stock on POS product cards */
 .pc-stock {
   font-size: 10px;

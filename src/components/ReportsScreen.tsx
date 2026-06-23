@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { TrendingUp, ClipboardList, Package, Banknote, CreditCard, Smartphone, Users, ChevronDown } from 'lucide-react';
-import type { Bill } from '../types';
+import type { Bill, Product } from '../types';
 import BillHistory from './BillHistory';
 
 interface ReportsScreenProps {
   bills: Bill[];
+  products: Product[];
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -64,7 +65,7 @@ function buildCustomers(bills: Bill[]): CustomerSummary[] {
   return Array.from(map.values()).sort((a, b) => b.totalSpend - a.totalSpend);
 }
 
-const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
+const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, products, onDelete }) => {
   const [tab, setTab] = useState<Tab>('sales');
   const [period, setPeriod] = useState<Period>('month');
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
@@ -97,20 +98,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
     return { totalSales, totalGST, billCount, avgOrder, byCash, byCard, byUpi, topItems };
   }, [filtered]);
 
-  const stockStats = React.useMemo(() => {
-    const itemMap = new Map<string, { name: string; qty: number; revenue: number }>();
-    for (const bill of bills) {
-      for (const item of bill.items) {
-        const existing = itemMap.get(item.productId) ?? { name: item.name, qty: 0, revenue: 0 };
-        itemMap.set(item.productId, {
-          name: item.name,
-          qty: existing.qty + item.quantity,
-          revenue: existing.revenue + item.lineTotal,
-        });
-      }
-    }
-    return Array.from(itemMap.values()).sort((a, b) => b.qty - a.qty);
-  }, [bills]);
+  const trackedProducts = React.useMemo(() =>
+    products
+      .filter(p => p.stock !== undefined && p.stock !== null)
+      .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0)),
+  [products]);
 
   const customers = React.useMemo(() => buildCustomers(bills), [bills]);
 
@@ -234,37 +226,61 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ bills, onDelete }) => {
         <div>
           <div className="screen-header" style={{ marginBottom: 12 }}>
             <div className="screen-header-text">
-              <h2>Product Summary</h2>
-              <p>Units sold across all time</p>
+              <h2>Inventory Stock</h2>
+              <p>{trackedProducts.length} product{trackedProducts.length !== 1 ? 's' : ''} tracked · sorted by lowest first</p>
             </div>
           </div>
-          {stockStats.length === 0 ? (
-            <div className="no-bills">No sales data yet.</div>
-          ) : (
-            <div className="table-card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Product</th>
-                    <th style={{ textAlign: 'right' }}>Units Sold</th>
-                    <th style={{ textAlign: 'right' }}>Total Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockStats.map((item, i) => (
-                    <tr key={item.name}>
-                      <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{i + 1}</td>
-                      <td style={{ fontWeight: 600 }}>{item.name}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Outfit', fontWeight: 700 }}>{item.qty}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Outfit', fontWeight: 700, color: 'var(--green-dark)' }}>
-                        ₹{item.revenue.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+          {trackedProducts.length === 0 ? (
+            <div className="no-bills">
+              No stock tracking enabled. Set a stock count on products to track inventory here.
             </div>
+          ) : (
+            <>
+              {/* Summary chips */}
+              <div className="stock-summary-row">
+                <div className="stock-summary-chip out">
+                  <span className="stock-summary-count">{trackedProducts.filter(p => p.stock === 0).length}</span>
+                  <span>Out of Stock</span>
+                </div>
+                <div className="stock-summary-chip low">
+                  <span className="stock-summary-count">{trackedProducts.filter(p => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 5).length}</span>
+                  <span>Low Stock</span>
+                </div>
+                <div className="stock-summary-chip ok">
+                  <span className="stock-summary-count">{trackedProducts.filter(p => (p.stock ?? 0) > 5).length}</span>
+                  <span>Sufficient</span>
+                </div>
+              </div>
+
+              <div className="table-card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>SKU</th>
+                      <th style={{ textAlign: 'right' }}>Stock</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trackedProducts.map(p => {
+                      const stock = p.stock ?? 0;
+                      const statusCls = stock === 0 ? 'stock-out' : stock <= 5 ? 'stock-low' : 'stock-ok';
+                      const statusText = stock === 0 ? 'Out of stock' : stock <= 5 ? 'Low' : 'OK';
+                      return (
+                        <tr key={p.id}>
+                          <td style={{ fontWeight: 600 }}>{p.name}</td>
+                          <td style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 12 }}>{p.sku || '—'}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'Outfit', fontWeight: 700 }}>{stock}</td>
+                          <td><span className={`stock-badge ${statusCls}`}>{statusText}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
