@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { Plus, QrCode, Printer, Trash2, CheckCircle, Clock, X, ArrowLeft, Package, ChevronDown } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import type { Product, Purchase, PurchaseItem } from '../types';
-import { useShop } from '../App';
 import UnitSelect from './UnitSelect';
 
 interface PurchaseScreenProps {
@@ -28,16 +27,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 function fmtDate(iso: string) { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
 function fmtDelivery(s: string) { if (!s) return ''; const d = new Date(s); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
 
-function buildQR(p: Purchase): string {
-  return [
-    p.purchaseNumber,
-    `Supplier: ${p.supplierName}`,
-    p.expectedDelivery ? `Delivery: ${fmtDelivery(p.expectedDelivery)}` : '',
-    `Items: ${p.items.length} type${p.items.length !== 1 ? 's' : ''}`,
-    `Total: Rs.${p.totalAmount.toFixed(0)}`,
-    p.notes ? `Note: ${p.notes}` : '',
-  ].filter(Boolean).join('\n');
-}
 
 // ── Product lookup combobox ──────────────────────────────────
 interface ComboboxProps {
@@ -111,7 +100,6 @@ const EMPTY_ITEM: FormItem = { name: '', quantity: '1', unit: '', pricePerUnit: 
 const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
   purchases, products, nextPurchaseNumber, onSave, onDelete, onStatusUpdate, units, onAddUnit,
 }) => {
-  const shop = useShop();
   const [view, setView] = useState<'list' | 'form'>('list');
   const [qrPurchase, setQrPurchase] = useState<Purchase | null>(null);
   const [saving, setSaving] = useState(false);
@@ -394,63 +382,57 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
         </div>
       )}
 
-      {/* QR Modal */}
+      {/* Product Labels Modal */}
       {qrPurchase && (
-        <div className="modal-overlay purchase-qr-overlay" onClick={() => setQrPurchase(null)}>
-          <div className="modal purchase-qr-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setQrPurchase(null)}>
+          <div className="modal product-labels-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header no-print">
-              <h3>{qrPurchase.purchaseNumber} — QR Code</h3>
+              <div>
+                <h3 style={{ marginBottom: 2 }}>Product Labels</h3>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {qrPurchase.purchaseNumber} · {qrPurchase.supplierName} · {qrPurchase.items.length} item{qrPurchase.items.length !== 1 ? 's' : ''}
+                </div>
+              </div>
               <button className="modal-close" onClick={() => setQrPurchase(null)}><X size={18} /></button>
             </div>
 
-            <div className="modal-body purchase-qr-body" ref={printAreaRef}>
-              <div className="purchase-print-header print-only">
-                <div className="purchase-print-shop">{shop.name}</div>
-                {shop.address && <div className="purchase-print-addr">{shop.address}</div>}
-                <div className="purchase-print-title">PURCHASE REQUEST</div>
+            <div className="modal-body product-labels-body" ref={printAreaRef}>
+              <div className="product-labels-grid">
+                {qrPurchase.items.map((item, i) => {
+                  const catalogProduct = item.productId ? products.find(p => p.id === item.productId) : undefined;
+                  const qrValue = item.productId
+                    ? `KADA:${item.productId}\n${item.name}\n₹${catalogProduct ? catalogProduct.price.toFixed(2) : '0.00'}/${item.unit}`
+                    : `${item.name}\n${item.unit}`;
+                  return (
+                    <div key={i} className="pl-label">
+                      {catalogProduct?.image && (
+                        <img src={catalogProduct.image} alt={item.name} className="pl-label-img" />
+                      )}
+                      {catalogProduct?.category && (
+                        <div className="pl-label-cat">{catalogProduct.category}</div>
+                      )}
+                      <div className="pl-label-name">{item.name}</div>
+                      {catalogProduct && (
+                        <div className="pl-label-price">₹{catalogProduct.price.toFixed(2)}</div>
+                      )}
+                      <div className="pl-label-sub">per {item.unit}{catalogProduct ? ` · GST ${catalogProduct.gstRate}%` : ''}</div>
+                      <div className="pl-label-qr">
+                        <QRCode value={qrValue} size={120} />
+                      </div>
+                      {(catalogProduct?.sku) && (
+                        <div className="pl-label-sku">{catalogProduct.sku}</div>
+                      )}
+                      <div className="pl-label-hint">Scan with Kada POS</div>
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="purchase-qr-content">
-                <div className="purchase-qr-code">
-                  <QRCode value={buildQR(qrPurchase)} size={180} style={{ display: 'block' }} className="purchase-qr-svg" />
-                </div>
-                <div className="purchase-qr-number">{qrPurchase.purchaseNumber}</div>
-                <div className="purchase-qr-supplier">{qrPurchase.supplierName}</div>
-                {qrPurchase.expectedDelivery && (
-                  <div className="purchase-qr-detail">Delivery: {fmtDelivery(qrPurchase.expectedDelivery)}</div>
-                )}
-              </div>
-
-              <div className="purchase-print-table">
-                <div className="purchase-print-table-header">
-                  <span style={{ flex: 3 }}>Item</span>
-                  <span style={{ flex: 1, textAlign: 'right' }}>Qty</span>
-                  <span style={{ flex: 1 }}>Unit</span>
-                  <span style={{ flex: 1.5, textAlign: 'right' }}>Amount</span>
-                </div>
-                {qrPurchase.items.map((item, i) => (
-                  <div key={i} className="purchase-print-table-row">
-                    <span style={{ flex: 3 }}>{item.name}</span>
-                    <span style={{ flex: 1, textAlign: 'right' }}>{item.quantity}</span>
-                    <span style={{ flex: 1 }}>{item.unit}</span>
-                    <span style={{ flex: 1.5, textAlign: 'right' }}>
-                      {item.pricePerUnit > 0 ? `₹${(item.quantity * item.pricePerUnit).toFixed(2)}` : '—'}
-                    </span>
-                  </div>
-                ))}
-                <div className="purchase-print-total">
-                  <span>Total</span>
-                  <span>₹{qrPurchase.totalAmount.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {qrPurchase.notes && <div className="purchase-print-notes">Note: {qrPurchase.notes}</div>}
             </div>
 
             <div className="modal-footer no-print">
               <button className="btn btn-ghost" onClick={() => setQrPurchase(null)}>Close</button>
               <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => window.print()}>
-                <Printer size={15} /> Print A4
+                <Printer size={15} /> Print All Labels
               </button>
             </div>
           </div>
