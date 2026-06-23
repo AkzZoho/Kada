@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Store, Users, Save, Plus, Trash2, Upload, X, Ruler } from 'lucide-react';
+import { Store, Users, Save, Plus, Trash2, Upload, X, Ruler, FlaskConical } from 'lucide-react';
 import type { ShopInfo } from '../types';
+import { seedTestData } from '../lib/seedData';
 
 interface SettingsProps {
   shopInfo: ShopInfo;
+  shopId: string;
   operators: string[];
   units: string[];
   onSave: (info: ShopInfo, operators: string[]) => void;
@@ -29,12 +31,26 @@ function compressImage(file: File, maxSize = 240): Promise<string> {
   });
 }
 
-const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators, units, onSave, onUnitsChange }) => {
+const Settings: React.FC<SettingsProps> = ({ shopInfo, shopId, operators: initOperators, units, onSave, onUnitsChange }) => {
   const [form, setForm] = useState<ShopInfo>(shopInfo);
   const [operators, setOperators] = useState<string[]>(initOperators);
   const [newOp, setNewOp] = useState('');
   const [newUnit, setNewUnit] = useState('');
   const [saved, setSaved] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedDone, setSeedDone] = useState(false);
+
+  async function handleSeedData() {
+    if (!shopId || seeding) return;
+    setSeeding(true);
+    try {
+      await seedTestData(shopId);
+      setSeedDone(true);
+      setTimeout(() => setSeedDone(false), 4000);
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   function set(field: keyof ShopInfo) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -237,6 +253,26 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, operators: initOperators,
         <button className="btn btn-primary settings-save-btn" onClick={handleSave}>
           <Save size={15} />
           {saved ? 'Saved!' : 'Save Changes'}
+        </button>
+      </div>
+
+      {/* Developer: seed test data */}
+      <div className="settings-section" style={{ borderColor: 'var(--border)', opacity: 0.8 }}>
+        <div className="settings-section-title">
+          <FlaskConical size={15} />
+          Developer Tools
+        </div>
+        <p className="settings-hint" style={{ marginBottom: 14 }}>
+          Adds 22 products, 72 bills across 6 months, and 18 purchase requests — so you can explore the app with realistic data. Existing data is not overwritten.
+        </p>
+        <button
+          className="btn btn-ghost"
+          style={{ display: 'flex', alignItems: 'center', gap: 7 }}
+          onClick={handleSeedData}
+          disabled={seeding || !shopId}
+        >
+          <FlaskConical size={15} />
+          {seeding ? 'Seeding data…' : seedDone ? 'Done! Reload to see data' : 'Seed Test Data'}
         </button>
       </div>
     </div>

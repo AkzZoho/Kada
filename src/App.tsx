@@ -281,6 +281,7 @@ export default function App() {
           {screen === 'settings' && (
             <Settings
               shopInfo={shopInfo}
+              shopId={shopId}
               operators={operators}
               units={units}
               onSave={handleSettingsSave}
