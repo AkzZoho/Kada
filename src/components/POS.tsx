@@ -6,6 +6,7 @@ import QRScanner from './QRScanner';
 
 interface POSProps {
   products: Product[];
+  bills: Bill[];
   operators: string[];
   operatorName: string;
   onOperatorChange: (name: string) => void;
@@ -35,7 +36,7 @@ const PAY_ICONS: Record<PaymentMode, React.ReactNode> = {
   upi:  <Smartphone size={18} />,
 };
 
-const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperatorChange, nextBillNumber, onBillSaved }) => {
+const POS: React.FC<POSProps> = ({ products, bills, operators, operatorName, onOperatorChange, nextBillNumber, onBillSaved }) => {
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('');
@@ -49,6 +50,16 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
   const [scanMsg, setScanMsg] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [opDropOpen, setOpDropOpen] = React.useState(false);
+  const [lookupStatus, setLookupStatus] = React.useState<'idle' | 'found' | 'new'>('idle');
+
+  React.useEffect(() => {
+    const digits = customerPhone.replace(/\D/g, '');
+    if (digits.length >= 10) {
+      const match = bills.find(b => b.customerPhone.replace(/\D/g, '') === digits && b.customerName);
+      if (match) { setCustomerName(match.customerName); setLookupStatus('found'); }
+      else { setLookupStatus('new'); }
+    } else { setLookupStatus('idle'); }
+  }, [customerPhone, bills]);
 
   const categories = React.useMemo(() => {
     const cats = new Set<string>();
@@ -65,7 +76,7 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
         || (p.sku && p.sku.toLowerCase().includes(q));
       const matchCat = !selectedCategory || p.category === selectedCategory;
       return matchSearch && matchCat;
-    });
+    }).sort((a, b) => (a.stock === 0 ? 1 : 0) - (b.stock === 0 ? 1 : 0));
   }, [products, search, selectedCategory]);
 
   const totals: Totals = React.useMemo(() => {
@@ -124,6 +135,7 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
     setCustomerPhone('');
     setDiscount('');
     setPaymentMode('cash');
+    setLookupStatus('idle');
   }
 
   function handleQRScan(text: string) {
@@ -353,14 +365,6 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
                 <span>Subtotal (Taxable)</span>
                 <span>₹{totals.subtotal.toFixed(2)}</span>
               </div>
-              <div className="summary-row">
-                <span>CGST</span>
-                <span>₹{totals.totalCGST.toFixed(2)}</span>
-              </div>
-              <div className="summary-row">
-                <span>SGST</span>
-                <span>₹{totals.totalSGST.toFixed(2)}</span>
-              </div>
               <div className="summary-row discount-row">
                 <span>Discount (₹)</span>
                 <input
@@ -368,6 +372,14 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
                   value={discount} onChange={(e) => setDiscount(e.target.value)}
                   placeholder="0.00" className="discount-input"
                 />
+              </div>
+              <div className="summary-row">
+                <span>CGST</span>
+                <span>₹{totals.totalCGST.toFixed(2)}</span>
+              </div>
+              <div className="summary-row">
+                <span>SGST</span>
+                <span>₹{totals.totalSGST.toFixed(2)}</span>
               </div>
               <div className="summary-row grand-total-row">
                 <span><strong>Grand Total</strong></span>
@@ -377,9 +389,29 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
           )}
 
           {/* Customer Info */}
-          <div className="customer-row">
-            <input type="text" placeholder="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-            <input type="tel" placeholder="Phone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+          <div className="customer-row" style={{ flexDirection: 'column' }}>
+            <input type="tel" placeholder="Mobile number" value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              style={{ flex: 'none', width: '100%' }} />
+            <div style={{ position: 'relative' }}>
+              <input type="text" placeholder="Customer name *" value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                style={{ flex: 'none', width: '100%',
+                  paddingRight: lookupStatus !== 'idle' ? 90 : undefined,
+                  ...(lookupStatus === 'found' ? { borderColor: 'var(--green)', background: 'var(--green-light)' } : {}) }} />
+              {lookupStatus === 'found' && (
+                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 10, color: 'var(--green)', fontWeight: 700, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+                  ✓ Returning
+                </span>
+              )}
+              {lookupStatus === 'new' && (
+                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+                  New customer
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Payment Modes */}
@@ -398,7 +430,7 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
             <Trash2 size={15} style={{ marginRight: 4 }} />
             Clear
           </button>
-          <button className="btn btn-primary" onClick={handleSaveBill} disabled={cart.length === 0 || saving}>
+          <button className="btn btn-primary" onClick={handleSaveBill} disabled={cart.length === 0 || saving || !customerName.trim()}>
             {saving ? 'Saving…' : 'Save & Print Bill'}
           </button>
         </div>

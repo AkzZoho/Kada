@@ -248,6 +248,7 @@ export default function App() {
           {screen === 'pos' && (
             <POS
               products={products}
+              bills={bills}
               operators={operators}
               operatorName={shopInfo.operatorName}
               onOperatorChange={handleOperatorChange}
