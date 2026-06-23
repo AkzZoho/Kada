@@ -7,7 +7,6 @@ import type { Bill, BillItem, Product, Purchase, PurchaseItem, GSTRate, PaymentM
 function daysAgo(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  // Spread across the day so ordering looks natural
   d.setHours(Math.floor(Math.random() * 10) + 8);
   d.setMinutes(Math.floor(Math.random() * 59));
   return d.toISOString();
@@ -19,6 +18,69 @@ function pick<T>(arr: T[]): T {
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
+}
+
+// Generate a colored placeholder image for a product using Canvas
+function generateProductImage(name: string, category: string): string {
+  const CATEGORY_THEMES: Record<string, { bg1: string; bg2: string; text: string; emoji: string }> = {
+    'Clothing':    { bg1: '#F97316', bg2: '#EA580C', text: '#fff', emoji: '👗' },
+    'Grocery':     { bg1: '#22C55E', bg2: '#16A34A', text: '#fff', emoji: '🛒' },
+    'Spices':      { bg1: '#EF4444', bg2: '#B91C1C', text: '#fff', emoji: '🌶' },
+    'Footwear':    { bg1: '#92400E', bg2: '#78350F', text: '#fff', emoji: '👡' },
+    'Accessories': { bg1: '#3B82F6', bg2: '#1D4ED8', text: '#fff', emoji: '☂️' },
+    'Utensils':    { bg1: '#6B7280', bg2: '#374151', text: '#fff', emoji: '🥘' },
+    'Pooja Items': { bg1: '#9333EA', bg2: '#6B21A8', text: '#fff', emoji: '🪔' },
+    'Cosmetics':   { bg1: '#EC4899', bg2: '#BE185D', text: '#fff', emoji: '💄' },
+    'Flowers':     { bg1: '#EAB308', bg2: '#A16207', text: '#fff', emoji: '🌸' },
+  };
+
+  const theme = CATEGORY_THEMES[category] ?? { bg1: '#2A8A57', bg2: '#1A6B40', text: '#fff', emoji: '📦' };
+  const initial = name.trim().charAt(0).toUpperCase();
+
+  const size = 280;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Gradient background
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, theme.bg1);
+  grad.addColorStop(1, theme.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Subtle pattern — diagonal stripes
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 18;
+  for (let x = -size; x < size * 2; x += 36) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + size, size);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Emoji (large, centered top half)
+  ctx.font = `${size * 0.32}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText(theme.emoji, size / 2, size * 0.38);
+
+  // Initial letter (bottom half)
+  ctx.font = `bold ${size * 0.22}px 'Outfit', sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText(initial, size / 2, size * 0.72);
+
+  // Category label
+  ctx.font = `600 ${size * 0.075}px 'Outfit', sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText(category.toUpperCase(), size / 2, size * 0.9);
+
+  return canvas.toDataURL('image/jpeg', 0.82);
 }
 
 // ── Seed catalogue ─────────────────────────────────────────────
@@ -97,14 +159,16 @@ export async function seedTestData(shopId: string): Promise<void> {
   const products: (Product & { id: string })[] = PRODUCTS.map((p, i) => ({
     ...p,
     id: `seed-${String(i + 1).padStart(3, '0')}`,
+    image: generateProductImage(p.name, p.category),
   }));
 
   // ── 1. Products ──────────────────────────────────────────────
   {
     const batch = writeBatch(db);
-    for (const { id, stock, ...rest } of products) {
+    for (const { id, stock, image, ...rest } of products) {
       const data: Record<string, unknown> = { ...rest };
       if (stock !== undefined) data.stock = stock;
+      if (image) data.image = image;
       batch.set(doc(db, 'shops', shopId, 'products', id), data);
     }
     await batch.commit();
