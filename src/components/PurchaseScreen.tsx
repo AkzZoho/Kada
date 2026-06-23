@@ -84,7 +84,7 @@ const ProductCombobox: React.FC<ComboboxProps> = ({ products, value, selectedId,
               </span>
               <span className="pr-combobox-meta">
                 {p.category && <span className="pr-combobox-cat">{p.category}</span>}
-                ₹{p.price.toFixed(2)} / {p.unit}
+                {p.stock !== undefined ? `${p.stock} ${p.unit} in stock` : p.unit}
               </span>
             </button>
           ))}
@@ -360,13 +360,13 @@ const PurchaseScreen: React.FC<PurchaseScreenProps> = ({
                         ? <><CheckCircle size={13} /> Mark Received</>
                         : <><Clock size={13} /> Mark Pending</>}
                     </button>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}
-                      onClick={() => setQrPurchase(p)}
-                    >
-                      <QrCode size={13} /> View QR
-                    </button>
+                    {p.status === 'received' && (
+                      <button className="btn btn-ghost"
+                        style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => setQrPurchase(p)}>
+                        <QrCode size={13} /> Print Labels
+                      </button>
+                    )}
                     <button
                       className="icon-btn del"
                       style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, padding: '7px 10px' }}
