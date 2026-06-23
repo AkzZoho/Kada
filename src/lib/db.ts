@@ -68,9 +68,10 @@ export async function saveProducts(shopId: string, products: Product[]) {
   existing.docs.forEach(d => { if (!incomingIds.has(d.id)) batch.delete(d.ref); });
   // Upsert each product — explicitly exclude undefined fields so Firestore accepts the write
   products.forEach((product) => {
-    const { id, stock, ...rest } = product;
+    const { id, stock, image, ...rest } = product;
     const data: Record<string, unknown> = { ...rest };
     if (stock !== undefined) data.stock = stock;
+    if (image !== undefined) data.image = image;
     batch.set(doc(db, 'shops', shopId, 'products', id), data);
   });
   await batch.commit();

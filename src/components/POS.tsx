@@ -97,17 +97,24 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
   }, [cart, discount]);
 
   function addToCart(product: Product) {
+    if (product.stock === 0) return;
     setCart((prev) => {
       const existing = prev.find((ci) => ci.product.id === product.id);
-      if (existing) return prev.map((ci) => ci.product.id === product.id ? { ...ci, quantity: ci.quantity + 1 } : ci);
+      if (existing) {
+        if (product.stock !== undefined && existing.quantity >= product.stock) return prev;
+        return prev.map((ci) => ci.product.id === product.id ? { ...ci, quantity: ci.quantity + 1 } : ci);
+      }
       return [...prev, { product, quantity: 1 }];
     });
   }
 
   function updateQty(productId: string, delta: number) {
     setCart((prev) =>
-      prev.map((ci) => ci.product.id === productId ? { ...ci, quantity: ci.quantity + delta } : ci)
-          .filter((ci) => ci.quantity > 0)
+      prev.map((ci) => {
+        if (ci.product.id !== productId) return ci;
+        if (delta > 0 && ci.product.stock !== undefined && ci.quantity >= ci.product.stock) return ci;
+        return { ...ci, quantity: ci.quantity + delta };
+      }).filter((ci) => ci.quantity > 0)
     );
   }
 
@@ -132,8 +139,12 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
       product = products.find((p) => p.name.toLowerCase() === firstLine.toLowerCase());
     }
     if (product) {
-      addToCart(product);
-      setScanMsg(`Added: ${product.name}`);
+      if (product.stock === 0) {
+        setScanMsg(`Out of stock: ${product.name}`);
+      } else {
+        addToCart(product);
+        setScanMsg(`Added: ${product.name}`);
+      }
     } else {
       setScanMsg('Product not found for this QR code.');
     }
@@ -262,9 +273,15 @@ const POS: React.FC<POSProps> = ({ products, operators, operatorName, onOperator
                   className={`product-card${cartItem ? ' in-cart' : ''}${product.stock === 0 ? ' out-of-stock' : ''}`}
                   onClick={() => addToCart(product)}
                 >
+                  {product.image && (
+                    <div className="pc-img-wrap">
+                      <img src={product.image} alt={product.name} className="pc-img" />
+                      {cartItem && <span className="pc-img-badge">✓ {cartItem.quantity}</span>}
+                    </div>
+                  )}
                   <div className="pc-top">
                     {product.category ? <span className="prod-cat">{product.category}</span> : <span />}
-                    {cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
+                    {!product.image && cartItem && <span className="pc-badge">✓ {cartItem.quantity}</span>}
                   </div>
                   <div className="prod-name">
                     {product.sku && <span className="pc-sku">{product.sku}</span>}

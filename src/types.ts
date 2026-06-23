@@ -40,6 +40,7 @@ export interface Product {
   gstRate: GSTRate;
   category: string;
   stock?: number;
+  image?: string;
 }
 
 export interface CartItem {

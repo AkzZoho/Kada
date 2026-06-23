@@ -1,6 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Pencil, Trash2, QrCode, X, Printer } from 'lucide-react';
+import { Plus, Pencil, Trash2, QrCode, X, Printer, Upload } from 'lucide-react';
 import type { Product, GSTRate } from '../types';
 import UnitSelect from './UnitSelect';
 
@@ -21,9 +21,29 @@ interface FormState {
   unit: string;
   gstRate: string;
   stock: string;
+  image: string;
 }
 
-const EMPTY_FORM: FormState = { sku: '', name: '', category: '', price: '', unit: 'piece', gstRate: '0', stock: '' };
+const EMPTY_FORM: FormState = { sku: '', name: '', category: '', price: '', unit: 'piece', gstRate: '0', stock: '', image: '' };
+
+function compressImage(file: File, maxSize = 320): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function nextSKU(products: Product[]): string {
   const nums = products
@@ -68,6 +88,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
       unit: product.unit,
       gstRate: String(product.gstRate),
       stock: product.stock !== undefined ? String(product.stock) : '',
+      image: product.image ?? '',
     });
     setError('');
     setModalOpen(true);
@@ -82,6 +103,14 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
 
   function handleField(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file);
+    setForm(f => ({ ...f, image: compressed }));
+    e.target.value = '';
   }
 
   function handleSave() {
@@ -99,6 +128,7 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
       unit: form.unit || 'piece',
       gstRate: parseInt(form.gstRate, 10) as GSTRate,
       stock: stockVal,
+      image: form.image || undefined,
     };
 
     if (editingProduct) {
@@ -139,6 +169,9 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
               const sl = stockLabel(product.stock);
               return (
                 <div key={product.id} className="pli">
+                  {product.image && (
+                    <img src={product.image} alt={product.name} className="pli-thumb" />
+                  )}
                   <div className="pli-main">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
                       {product.sku && <span className="sku-badge">{product.sku}</span>}
@@ -180,6 +213,28 @@ const Products: React.FC<ProductsProps> = ({ products, onUpdate, units, onAddUni
                   {error}
                 </div>
               )}
+              {/* Product image */}
+              <div className="prod-img-upload-row">
+                <div className="prod-img-preview">
+                  {form.image
+                    ? <img src={form.image} alt="Product" />
+                    : <span className="prod-img-placeholder">{form.name ? form.name[0].toUpperCase() : '?'}</span>
+                  }
+                </div>
+                <div className="prod-img-actions">
+                  <label className="btn btn-ghost prod-img-btn">
+                    <Upload size={13} />
+                    {form.image ? 'Change Photo' : 'Add Photo'}
+                    <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
+                  </label>
+                  {form.image && (
+                    <button className="btn btn-ghost prod-img-remove" onClick={() => setForm(f => ({ ...f, image: '' }))}>
+                      <X size={13} /> Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="form-grid">
                 <div className="form-row">
                   <div className="form-field" style={{ flex: 2 }}>
