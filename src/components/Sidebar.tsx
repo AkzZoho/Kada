@@ -1,6 +1,6 @@
-import React from 'react';
-import { Receipt, Package, Settings2, User, LogOut, ShoppingBag, BarChart2 } from 'lucide-react';
-import type { Screen, ShopInfo } from '../types';
+import React, { useState } from 'react';
+import { Receipt, Package, Settings2, User, LogOut, ShoppingBag, BarChart2, ChevronDown, Check, Store } from 'lucide-react';
+import type { Screen, ShopInfo, Tenant } from '../types';
 
 interface SidebarProps {
   screen: Screen;
@@ -8,6 +8,9 @@ interface SidebarProps {
   shopInfo: ShopInfo;
   onEditSettings: () => void;
   onSignOut: () => void;
+  tenants: Tenant[];
+  activeTenant: Tenant;
+  onSwitchTenant: (tenant: Tenant) => void;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -24,11 +27,45 @@ const NAV_ITEMS: { screen: Screen; Icon: React.FC<{ size: number }>; label: stri
   { screen: 'reports',  Icon: BarChart2,    label: 'Reports' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings, onSignOut }) => {
+const Sidebar: React.FC<SidebarProps> = ({ screen, onNav, shopInfo, onEditSettings, onSignOut, tenants, activeTenant, onSwitchTenant }) => {
+  const [tenantDropOpen, setTenantDropOpen] = useState(false);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <h2>{shopInfo.name}</h2>
+        {tenants.length > 1 ? (
+          <div className="custom-select" style={{ width: '100%' }}>
+            <button
+              type="button"
+              className={`custom-select-trigger${tenantDropOpen ? ' open' : ''}`}
+              style={{ width: '100%', background: 'transparent', border: 'none', padding: '2px 0' }}
+              onClick={() => setTenantDropOpen(o => !o)}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 15 }}>
+                <Store size={14} />
+                {activeTenant.name}
+              </span>
+              <ChevronDown size={13} className={`custom-select-chevron${tenantDropOpen ? ' flipped' : ''}`} />
+            </button>
+            {tenantDropOpen && (
+              <div className="custom-select-menu">
+                {tenants.map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`custom-select-option${activeTenant.id === t.id ? ' selected' : ''}`}
+                    onClick={() => { onSwitchTenant(t); setTenantDropOpen(false); }}
+                  >
+                    {t.name}
+                    {activeTenant.id === t.id && <Check size={13} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <h2>{shopInfo.name}</h2>
+        )}
         <p>Billing Software</p>
       </div>
 

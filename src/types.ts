@@ -1,5 +1,21 @@
 export type GSTRate = 0 | 5 | 12 | 18 | 28;
 
+export type TenantRole = 'owner' | 'manager' | 'cashier';
+
+export interface TenantMember {
+  uid: string;
+  email: string;
+  role: TenantRole;
+  joinedAt: string;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  createdAt: string;
+  ownerId: string;
+}
+
 export interface ShopInfo {
   name: string;
   address: string;

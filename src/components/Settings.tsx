@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
-import { Store, Users, Save, Plus, Trash2, Upload, X, Ruler, FlaskConical } from 'lucide-react';
-import type { ShopInfo } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Store, Users, Save, Plus, Trash2, Upload, X, Ruler, FlaskConical, UserPlus, Crown, ShieldCheck, CreditCard } from 'lucide-react';
+import type { ShopInfo, TenantMember, TenantRole } from '../types';
 import { seedTestData } from '../lib/seedData';
+import * as db from '../lib/db';
+import { auth } from '../lib/firebase';
 
 interface SettingsProps {
   shopInfo: ShopInfo;
   shopId: string;
+  tenantId: string;
   operators: string[];
   units: string[];
   onSave: (info: ShopInfo, operators: string[]) => void;
   onUnitsChange: (units: string[]) => void;
 }
+
+const ROLE_ICONS: Record<TenantRole, React.ReactNode> = {
+  owner:   <Crown size={13} />,
+  manager: <ShieldCheck size={13} />,
+  cashier: <CreditCard size={13} />,
+};
 
 function compressImage(file: File, maxSize = 240): Promise<string> {
   return new Promise((resolve) => {
@@ -31,7 +40,7 @@ function compressImage(file: File, maxSize = 240): Promise<string> {
   });
 }
 
-const Settings: React.FC<SettingsProps> = ({ shopInfo, shopId, operators: initOperators, units, onSave, onUnitsChange }) => {
+const Settings: React.FC<SettingsProps> = ({ shopInfo, shopId, tenantId, operators: initOperators, units, onSave, onUnitsChange }) => {
   const [form, setForm] = useState<ShopInfo>(shopInfo);
   const [operators, setOperators] = useState<string[]>(initOperators);
   const [newOp, setNewOp] = useState('');
@@ -40,11 +49,57 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, shopId, operators: initOp
   const [seeding, setSeeding] = useState(false);
   const [seedDone, setSeedDone] = useState(false);
 
+  // Members
+  const [members, setMembers] = useState<TenantMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [inviteUid, setInviteUid] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<TenantRole>('cashier');
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const myUid = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!tenantId) return;
+    setMembersLoading(true);
+    db.getTenantMembers(tenantId)
+      .then(setMembers)
+      .finally(() => setMembersLoading(false));
+  }, [tenantId]);
+
+  async function handleInvite() {
+    if (!inviteUid.trim() || !inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteError('');
+    try {
+      await db.inviteMember(tenantId, inviteUid.trim(), inviteEmail.trim(), inviteRole);
+      const updated = await db.getTenantMembers(tenantId);
+      setMembers(updated);
+      setInviteUid('');
+      setInviteEmail('');
+    } catch (e) {
+      setInviteError(e instanceof Error ? e.message : 'Failed to add member');
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRemoveMember(uid: string) {
+    if (!window.confirm('Remove this member from the shop?')) return;
+    await db.removeMember(tenantId, uid);
+    setMembers(prev => prev.filter(m => m.uid !== uid));
+  }
+
+  async function handleRoleChange(uid: string, role: TenantRole) {
+    await db.updateMemberRole(tenantId, uid, role);
+    setMembers(prev => prev.map(m => m.uid === uid ? { ...m, role } : m));
+  }
+
   async function handleSeedData() {
-    if (!shopId || seeding) return;
+    if (!shopId || !tenantId || seeding) return;
     setSeeding(true);
     try {
-      await seedTestData(shopId);
+      await seedTestData(tenantId, shopId);
       setSeedDone(true);
       setTimeout(() => setSeedDone(false), 4000);
     } finally {
@@ -254,6 +309,92 @@ const Settings: React.FC<SettingsProps> = ({ shopInfo, shopId, operators: initOp
           <Save size={15} />
           {saved ? 'Saved!' : 'Save Changes'}
         </button>
+      </div>
+
+      {/* Team Members */}
+      <div className="settings-section">
+        <div className="settings-section-title">
+          <UserPlus size={15} />
+          Team Members
+        </div>
+        <div className="settings-hint" style={{ marginBottom: 14 }}>
+          Add members by their Firebase UID and email. Roles: Owner (full access), Manager (can edit), Cashier (POS + reports only).
+        </div>
+
+        {membersLoading ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
+        ) : (
+          <div className="op-list" style={{ marginBottom: 16 }}>
+            {members.map(m => (
+              <div key={m.uid} className="op-item">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                  {ROLE_ICONS[m.role]}
+                  <span className="op-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.email}
+                  </span>
+                </span>
+                {m.uid !== myUid && (
+                  <>
+                    <select
+                      value={m.role}
+                      onChange={e => handleRoleChange(m.uid, e.target.value as TenantRole)}
+                      style={{ fontSize: 12, padding: '3px 6px' }}
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="manager">Manager</option>
+                      <option value="cashier">Cashier</option>
+                    </select>
+                    <button className="icon-btn del" onClick={() => handleRemoveMember(m.uid)} title="Remove">
+                      <Trash2 size={13} />
+                    </button>
+                  </>
+                )}
+                {m.uid === myUid && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>You</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              className="op-add-input"
+              placeholder="Firebase UID"
+              value={inviteUid}
+              onChange={e => setInviteUid(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <input
+              type="email"
+              className="op-add-input"
+              placeholder="Email"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <select
+              value={inviteRole}
+              onChange={e => setInviteRole(e.target.value as TenantRole)}
+              style={{ fontSize: 13, padding: '6px 8px' }}
+            >
+              <option value="owner">Owner</option>
+              <option value="manager">Manager</option>
+              <option value="cashier">Cashier</option>
+            </select>
+          </div>
+          {inviteError && <div className="auth-error">{inviteError}</div>}
+          <button
+            className="btn btn-ghost op-add-btn"
+            onClick={handleInvite}
+            disabled={inviting || !inviteUid.trim() || !inviteEmail.trim()}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            <Plus size={15} /> {inviting ? 'Adding…' : 'Add Member'}
+          </button>
+        </div>
       </div>
 
       {/* Developer: seed test data */}

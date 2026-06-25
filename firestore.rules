@@ -1,18 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isShopOwner(shopId) {
+
+    function isTenantMember(tenantId) {
       return request.auth != null
-        && get(/databases/$(database)/documents/shops/$(shopId)).data.userId == request.auth.uid;
+        && exists(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid));
     }
 
-    match /shops/{shopId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    function isTenantOwner(tenantId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerId == request.auth.uid;
+    }
 
-      match /{subcollection}/{docId} {
-        allow read, write: if isShopOwner(shopId);
+    function memberRole(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function canWrite(tenantId) {
+      return isTenantMember(tenantId)
+        && (memberRole(tenantId) == 'owner' || memberRole(tenantId) == 'manager');
+    }
+
+    // Flat lookup collection — users can only read/write their own membership entries
+    match /tenantMembers/{docId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create, update: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId);
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isTenantOwner(tenantId);
+      allow delete: if isTenantOwner(tenantId);
+
+      match /members/{uid} {
+        allow read: if isTenantMember(tenantId);
+        allow write: if isTenantOwner(tenantId) || request.auth.uid == uid;
+      }
+
+      match /shops/{shopId} {
+        allow read: if isTenantMember(tenantId);
+        allow write: if canWrite(tenantId);
+
+        match /{subcollection}/{docId} {
+          allow read: if isTenantMember(tenantId);
+          allow write: if canWrite(tenantId);
+        }
       }
     }
   }
