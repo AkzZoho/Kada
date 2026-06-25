@@ -155,12 +155,14 @@ function makeBillItem(p: Product & { id: string }, qty: number): BillItem {
 
 // ── Main seed function ─────────────────────────────────────────
 
-export async function seedTestData(shopId: string): Promise<void> {
+export async function seedTestData(tenantId: string, shopId: string): Promise<void> {
   const products: (Product & { id: string })[] = PRODUCTS.map((p, i) => ({
     ...p,
     id: `seed-${String(i + 1).padStart(3, '0')}`,
     image: generateProductImage(p.name, p.category),
   }));
+
+  const shopPath = `tenants/${tenantId}/shops/${shopId}`;
 
   // ── 1. Products ──────────────────────────────────────────────
   {
@@ -169,7 +171,7 @@ export async function seedTestData(shopId: string): Promise<void> {
       const data: Record<string, unknown> = { ...rest };
       if (stock !== undefined) data.stock = stock;
       if (image) data.image = image;
-      batch.set(doc(db, 'shops', shopId, 'products', id), data);
+      batch.set(doc(db, shopPath, 'products', id), data);
     }
     await batch.commit();
   }
@@ -215,7 +217,7 @@ export async function seedTestData(shopId: string): Promise<void> {
   {
     const batch = writeBatch(db);
     for (const { id, ...data } of bills) {
-      batch.set(doc(db, 'shops', shopId, 'bills', id), data);
+      batch.set(doc(db, shopPath, 'bills', id), data);
     }
     await batch.commit();
   }
@@ -256,13 +258,13 @@ export async function seedTestData(shopId: string): Promise<void> {
   {
     const batch = writeBatch(db);
     for (const { id, ...data } of purchases) {
-      batch.set(doc(db, 'shops', shopId, 'purchases', id), data);
+      batch.set(doc(db, shopPath, 'purchases', id), data);
     }
     await batch.commit();
   }
 
   // ── 4. Update shop counters ───────────────────────────────────
-  await updateDoc(doc(db, 'shops', shopId), {
+  await updateDoc(doc(db, shopPath), {
     billCounter:     72,
     purchaseCounter: 18,
   });
